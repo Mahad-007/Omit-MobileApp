@@ -88,53 +88,13 @@ export default {
             height: "0",
           },
         },
-        "fade-in": {
-          from: {
-            opacity: "0",
-            transform: "translateY(10px)",
-          },
-          to: {
-            opacity: "1",
-            transform: "translateY(0)",
-          },
-        },
-        "slide-up": {
-          from: {
-            transform: "translateY(20px)",
-            opacity: "0",
-          },
-          to: {
-            transform: "translateY(0)",
-            opacity: "1",
-          },
-        },
-        "pulse-soft": {
-          "0%, 100%": {
-            opacity: "1",
-          },
-          "50%": {
-            opacity: "0.8",
-          },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.4s ease-out",
-        "slide-up": "slide-up 0.3s ease-out",
-        "pulse-soft": "pulse-soft 2s ease-in-out infinite",
-      },
-      backgroundImage: {
-        "gradient-card": "var(--gradient-card)",
-        "gradient-primary": "var(--gradient-primary)",
-        "gradient-accent": "var(--gradient-accent)",
-      },
-      boxShadow: {
-        "soft": "var(--shadow-soft)",
-        "card": "var(--shadow-card)",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Arial", "system-ui", "sans-serif"],
       },
     },
   },
