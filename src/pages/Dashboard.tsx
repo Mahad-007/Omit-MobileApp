@@ -64,7 +64,6 @@ export default function Dashboard() {
                     outerRadius={100}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, value }) => `${name}: ${value.toFixed(1)}h`}
                   >
                     <Cell fill="hsl(var(--success))" />
                     <Cell fill="hsl(var(--destructive))" />
@@ -76,6 +75,12 @@ export default function Dashboard() {
                       borderRadius: '6px'
                     }}
                     formatter={(value: number) => `${value.toFixed(1)}h`}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    iconType="circle"
+                    formatter={(value) => <span className="text-sm">{value}</span>}
                   />
                 </PieChart>
               </ResponsiveContainer>
