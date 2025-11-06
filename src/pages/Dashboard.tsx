@@ -6,19 +6,21 @@ import { useNavigate } from "react-router-dom";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const productivityData = [
-  { time: "9 AM", hours: 0.5 },
-  { time: "10 AM", hours: 1.2 },
-  { time: "11 AM", hours: 2.0 },
-  { time: "12 PM", hours: 2.5 },
-  { time: "1 PM", hours: 2.7 },
-  { time: "2 PM", hours: 3.5 },
-  { time: "3 PM", hours: 4.2 },
-  { time: "4 PM", hours: 4.5 },
+  { time: "9 AM", saved: 0.3, wasted: 0.1 },
+  { time: "10 AM", saved: 0.8, wasted: 0.2 },
+  { time: "11 AM", saved: 1.5, wasted: 0.3 },
+  { time: "12 PM", saved: 2.0, wasted: 0.4 },
+  { time: "1 PM", saved: 2.3, wasted: 0.5 },
+  { time: "2 PM", saved: 3.0, wasted: 0.6 },
+  { time: "3 PM", saved: 3.8, wasted: 0.7 },
+  { time: "4 PM", saved: 4.5, wasted: 0.8 },
 ];
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const totalHours = productivityData[productivityData.length - 1].hours;
+  const latestData = productivityData[productivityData.length - 1];
+  const totalSaved = latestData.saved;
+  const totalWasted = latestData.wasted;
 
   return (
     <div className="space-y-6">
@@ -37,9 +39,15 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="text-center space-y-2">
-              <div className="text-5xl font-bold text-primary">{totalHours.toFixed(1)}h</div>
-              <p className="text-sm text-muted-foreground">Total productive time today</p>
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="space-y-2">
+                <div className="text-4xl font-bold text-success">{totalSaved.toFixed(1)}h</div>
+                <p className="text-sm text-muted-foreground">Time Saved</p>
+              </div>
+              <div className="space-y-2">
+                <div className="text-4xl font-bold text-destructive">{totalWasted.toFixed(1)}h</div>
+                <p className="text-sm text-muted-foreground">Time Wasted</p>
+              </div>
             </div>
 
             <div className="h-[300px]">
@@ -65,10 +73,19 @@ export default function Dashboard() {
                   />
                   <Area 
                     type="monotone" 
-                    dataKey="hours" 
-                    stroke="hsl(var(--primary))" 
-                    fill="hsl(var(--primary) / 0.2)" 
+                    dataKey="saved" 
+                    stroke="hsl(var(--success))" 
+                    fill="hsl(var(--success) / 0.2)" 
                     strokeWidth={2}
+                    name="Time Saved"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="wasted" 
+                    stroke="hsl(var(--destructive))" 
+                    fill="hsl(var(--destructive) / 0.2)" 
+                    strokeWidth={2}
+                    name="Time Wasted"
                   />
                 </AreaChart>
               </ResponsiveContainer>
