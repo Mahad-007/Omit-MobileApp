@@ -39,7 +39,7 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 text-center">
+            <div className="space-y-4 text-center">
               <div className="space-y-2">
                 <div className="text-5xl font-bold text-success">{totalSaved.toFixed(1)}h</div>
                 <p className="text-sm text-muted-foreground">Time Saved</p>
