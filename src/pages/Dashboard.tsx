@@ -41,11 +41,11 @@ export default function Dashboard() {
           <CardContent className="space-y-6">
             <div className="grid grid-cols-2 gap-4 text-center">
               <div className="space-y-2">
-                <div className="text-4xl font-bold text-success">{totalSaved.toFixed(1)}h</div>
+                <div className="text-5xl font-bold text-success">{totalSaved.toFixed(1)}h</div>
                 <p className="text-sm text-muted-foreground">Time Saved</p>
               </div>
-              <div className="space-y-2">
-                <div className="text-4xl font-bold text-destructive">{totalWasted.toFixed(1)}h</div>
+              <div className="space-y-2 opacity-60">
+                <div className="text-3xl font-bold text-destructive">{totalWasted.toFixed(1)}h</div>
                 <p className="text-sm text-muted-foreground">Time Wasted</p>
               </div>
             </div>
