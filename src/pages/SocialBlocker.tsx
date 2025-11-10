@@ -20,6 +20,7 @@ interface BlockedApp {
   name: string;
   url: string;
   blocked: boolean;
+  blockMode: "always" | "focus";
 }
 
 export default function SocialBlocker() {
@@ -41,6 +42,7 @@ export default function SocialBlocker() {
       name: newAppName.trim(),
       url: newAppUrl.trim(),
       blocked: false,
+      blockMode: "focus",
     };
 
     setApps((prev) => [...prev, newApp]);
@@ -62,6 +64,18 @@ export default function SocialBlocker() {
         app.id === id ? { ...app, blocked: !app.blocked } : app
       )
     );
+  };
+
+  const toggleBlockMode = (id: string) => {
+    setApps((prev) =>
+      prev.map((app) =>
+        app.id === id ? { ...app, blockMode: app.blockMode === "always" ? "focus" : "always" } : app
+      )
+    );
+    const app = apps.find((a) => a.id === id);
+    if (app) {
+      toast.success(`${app.name} will be blocked ${app.blockMode === "always" ? "only during focus mode" : "always"}`);
+    }
   };
 
   const startFocusMode = () => {
@@ -97,39 +111,62 @@ export default function SocialBlocker() {
                   <p className="text-sm text-muted-foreground">Click the button below to add apps you want to block</p>
                 </div>
               ) : (
-                apps.map((app) => (
-                  <div
-                    key={app.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-3 h-3 rounded-full bg-primary" />
-                      <div className="flex-1">
-                        <Label htmlFor={app.id} className="text-base font-medium cursor-pointer block">
-                          {app.name}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">{app.url}</p>
+                apps.map((app) => {
+                  const isActivelyBlocked = app.blocked && (app.blockMode === "always" || focusModeActive);
+                  return (
+                    <div
+                      key={app.id}
+                      className={`flex items-center justify-between p-4 rounded-lg transition-colors group ${
+                        isActivelyBlocked 
+                          ? "bg-destructive/10 border border-destructive/20" 
+                          : "bg-secondary hover:bg-secondary/80"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`w-3 h-3 rounded-full ${isActivelyBlocked ? "bg-destructive" : "bg-primary"}`} />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor={app.id} className="text-base font-medium cursor-pointer">
+                              {app.name}
+                            </Label>
+                            {app.blockMode === "always" && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                Always
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{app.url}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleBlockMode(app.id)}
+                          className="text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          {app.blockMode === "always" ? "Focus Only" : "Always Block"}
+                        </Button>
+                        <Switch
+                          id={app.id}
+                          checked={app.blocked}
+                          onCheckedChange={() => toggleApp(app.id)}
+                          disabled={focusModeActive}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeApp(app.id)}
+                          disabled={focusModeActive}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id={app.id}
-                        checked={app.blocked}
-                        onCheckedChange={() => toggleApp(app.id)}
-                        disabled={focusModeActive}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeApp(app.id)}
-                        disabled={focusModeActive}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
+              
               )}
               
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -214,14 +251,23 @@ export default function SocialBlocker() {
                 </Button>
               )}
 
-              {focusModeActive && (
-                <div className="bg-gradient-card rounded-lg p-4 animate-pulse-soft">
-                  <p className="text-sm font-medium text-foreground mb-1">🔒 Focus Mode Active</p>
-                  <p className="text-xs text-muted-foreground">
-                    {apps.filter((app) => app.blocked).length} apps blocked
-                  </p>
-                </div>
-              )}
+              <div className="bg-gradient-card rounded-lg p-4">
+                {focusModeActive ? (
+                  <>
+                    <p className="text-sm font-medium text-foreground mb-1">🔒 Focus Mode Active</p>
+                    <p className="text-xs text-muted-foreground">
+                      {apps.filter((app) => app.blocked).length} apps blocked during session
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-foreground mb-1">🛡️ Always Blocked</p>
+                    <p className="text-xs text-muted-foreground">
+                      {apps.filter((app) => app.blocked && app.blockMode === "always").length} apps permanently blocked
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
           </DashboardCard>
 
