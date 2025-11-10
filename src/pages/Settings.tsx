@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 
 export default function Settings() {
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const [strictMode, setStrictMode] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const saveSettings = () => {
     toast.success("Settings saved successfully!");
@@ -61,8 +62,8 @@ export default function Settings() {
               </div>
               <Switch
                 id="dark-mode"
-                checked={darkMode}
-                onCheckedChange={setDarkMode}
+                checked={theme === "dark"}
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
               />
             </div>
             <div className="p-4 rounded-lg bg-gradient-card">
