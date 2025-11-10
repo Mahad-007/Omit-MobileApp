@@ -89,8 +89,8 @@ export default function Motivation() {
         </DashboardCard>
 
         <DashboardCard title="Positive Affirmation" icon={Sparkles}>
-          <div className="bg-gradient-accent rounded-lg p-8 text-white min-h-[200px] flex items-center justify-center">
-            <p className="text-2xl font-bold text-center leading-relaxed">
+          <div className="bg-accent/10 border-2 border-accent rounded-lg p-8 min-h-[200px] flex items-center justify-center">
+            <p className="text-2xl font-bold text-center leading-relaxed text-foreground">
               {affirmations[currentAffirmation]}
             </p>
           </div>
