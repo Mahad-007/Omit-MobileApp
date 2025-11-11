@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Site Blocked - FocusSphere</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      padding: 20px;
+    }
+    .container {
+      text-align: center;
+      max-width: 500px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 16px;
+      opacity: 0.9;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+    .site-name {
+      font-weight: bold;
+      font-size: 18px;
+      display: block;
+      margin: 10px 0;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s;
+      margin: 5px;
+      cursor: pointer;
+    }
+    .button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🛡️</div>
+    <h1>Site Blocked</h1>
+    <p>
+      <span class="site-name" id="siteName">This website</span>
+      is currently blocked to help you stay focused.
+    </p>
+    <p style="font-size: 14px; opacity: 0.8;">
+      This site is blocked by FocusSphere. You can manage your blocked sites in the app.
+    </p>
+    <div>
+      <a href="http://localhost:8080/blocker" class="button">Manage Blocked Sites</a>
+      <button onclick="window.history.back()" class="button">Go Back</button>
+    </div>
+  </div>
+  <script>
+    // Get the blocked site from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const site = urlParams.get('site') || 'this website';
+    document.getElementById('siteName').textContent = site;
+  </script>
+</body>
+</html>
+

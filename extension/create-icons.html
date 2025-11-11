@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Extension Icons</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .icon-preview {
+      display: inline-block;
+      margin: 10px;
+      text-align: center;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      margin: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .instructions {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>FocusSphere Extension Icon Generator</h1>
+  <div class="instructions">
+    <p>This page will generate icon files for the browser extension. Click "Generate Icons" and then "Download All Icons".</p>
+    <p>After downloading, extract the ZIP file and move the icons folder to the extension directory.</p>
+  </div>
+
+  <div id="previews"></div>
+  
+  <button onclick="generateIcons()">Generate Icons</button>
+  <button onclick="downloadAll()" id="downloadBtn" disabled>Download All Icons</button>
+
+  <script>
+    const sizes = [16, 48, 128];
+    let canvases = {};
+
+    function generateIcons() {
+      const previews = document.getElementById('previews');
+      previews.innerHTML = '';
+
+      sizes.forEach(size => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Draw shield icon
+        ctx.fillStyle = '#667eea';
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw shield shape
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(size / 2, size * 0.2);
+        ctx.lineTo(size * 0.7, size * 0.35);
+        ctx.lineTo(size * 0.7, size * 0.6);
+        ctx.lineTo(size / 2, size * 0.85);
+        ctx.lineTo(size * 0.3, size * 0.6);
+        ctx.lineTo(size * 0.3, size * 0.35);
+        ctx.closePath();
+        ctx.fill();
+
+        const div = document.createElement('div');
+        div.className = 'icon-preview';
+        div.appendChild(canvas);
+        div.appendChild(document.createTextNode(`${size}x${size}`));
+        previews.appendChild(div);
+
+        canvases[size] = canvas;
+      });
+
+      document.getElementById('downloadBtn').disabled = false;
+    }
+
+    function downloadCanvas(canvas, filename) {
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    }
+
+    function downloadAll() {
+      // Create a zip using JSZip (we'll use a simpler approach)
+      sizes.forEach(size => {
+        setTimeout(() => {
+          const canvas = canvases[size];
+          downloadCanvas(canvas, `icon${size}.png`);
+        }, size * 10);
+      });
+
+      alert('Icons downloaded! Please:\n1. Create a folder called "icons" in the extension directory\n2. Move all three icon files into that folder\n3. Reload the extension');
+    }
+
+    // Auto-generate on load
+    window.onload = generateIcons;
+  </script>
+</body>
+</html>
+
