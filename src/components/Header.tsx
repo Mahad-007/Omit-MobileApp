@@ -1,8 +1,21 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Clock } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Clock, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function Header() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [focusTime, setFocusTime] = useState(0);
   const [isActive, setIsActive] = useState(false);
 
@@ -21,6 +34,30 @@ export function Header() {
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out successfully");
+      navigate("/login");
+    } catch (error) {
+      toast.error("Failed to sign out");
+    }
+  };
+
+  const getUserInitials = () => {
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
+
+  const getUserDisplayName = () => {
+    if (user?.email) {
+      return user.email.split("@")[0];
+    }
+    return "User";
   };
 
   return (
@@ -43,12 +80,33 @@ export function Header() {
 
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <p className="text-sm font-medium text-foreground">Welcome back!</p>
+          <p className="text-sm font-medium text-foreground">Welcome back, {getUserDisplayName()}!</p>
           <p className="text-xs text-muted-foreground">Let's stay focused today</p>
         </div>
-        <Avatar>
-          <AvatarFallback className="bg-gradient-primary text-primary-foreground">U</AvatarFallback>
-        </Avatar>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="outline-none">
+              <Avatar>
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground cursor-pointer">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">My Account</p>
+                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
