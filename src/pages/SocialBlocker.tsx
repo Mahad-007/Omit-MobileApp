@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
 import { syncWithExtension as syncWithExtensionHelper } from "@/lib/extension-sync";
+import { storage, BlockedApp } from "@/lib/storage";
 import {
   Dialog,
   DialogContent,
@@ -18,19 +18,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-interface BlockedApp {
-  id: string;
-  name: string;
-  url: string;
-  blocked: boolean;
-  blockMode: "always" | "focus";
-  user_id?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
 export default function SocialBlocker() {
-  const { user, session } = useAuth();
+  const { user } = useAuth(); // Keep auth for user context if needed, though storage is now local
   const [apps, setApps] = useState<BlockedApp[]>([]);
   const [duration, setDuration] = useState(60);
   const [focusModeActive, setFocusModeActive] = useState(false);
@@ -39,45 +28,75 @@ export default function SocialBlocker() {
   const [newAppName, setNewAppName] = useState("");
   const [newAppUrl, setNewAppUrl] = useState("");
   const [loading, setLoading] = useState(true);
+  // We can track session ID if we want, but local storage handles it simpler
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
-  // Fetch blocked apps from Supabase
+  // Fetch blocked apps from Storage
   useEffect(() => {
-    if (user) {
-      fetchApps();
-      checkActiveSession();
-      
-      // Store user ID in localStorage for extension to find
-      localStorage.setItem('focussphere_user_id', user.id);
-      localStorage.setItem('focussphere_sync', JSON.stringify({
-        userId: user.id,
-        accessToken: session?.access_token,
-        focusMode: focusModeActive,
-        timestamp: Date.now()
-      }));
-      
-      // Also trigger push sync
-      syncWithExtensionHelper(user.id, focusModeActive, session?.access_token);
+    // Load apps
+    const loadApps = () => {
+      setApps(storage.getBlockedApps());
+      setLoading(false);
+    };
+    
+    loadApps();
+    checkForActiveSession();
+    
+    // Sync to extension on load (push local data to extension)
+    // We'll update the sync helper to pass data directly
+    triggerExtensionSync();
+    
+    // Check local storage for active session logic handled in storage? 
+    // Actually we need to manage the timer here.
+  }, []);
+
+  // Persist session state implies we need to check if there is an ongoing session
+  // storage.ts doesn't explicitly track "active" session, only history. 
+  // We should add a "current_session" key to storage or just use component state + localStorage persistence for the timer.
+  // Let's implement a simple persistence for the active timer in this component or storage.
+  
+  const checkForActiveSession = () => {
+    // Simple check: is there a stored end time?
+    const storedSession = localStorage.getItem('focussphere_current_session');
+    if (storedSession) {
+      try {
+        const { id, endTime, duration } = JSON.parse(storedSession);
+        const now = Date.now();
+        if (now < endTime) {
+          setActiveSessionId(id);
+          setFocusModeActive(true);
+          setDuration(duration);
+          setTimeRemaining(Math.round((endTime - now) / 1000));
+        } else {
+          // It finished while away
+          localStorage.removeItem('focussphere_current_session');
+          // Start a new history entry if not already present? 
+          // Ideally we save history when it finishes.
+        }
+      } catch (e) {
+        console.error("Error parsing session", e);
+      }
     }
-  }, [user]);
+  };
 
-  const endSession = async (sessionId: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from("focus_sessions")
-        .update({
-          is_active: false,
-          ended_at: new Date().toISOString(),
-        })
-        .eq("id", sessionId)
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-    } catch (error: unknown) {
-      console.error("Error ending session:", error);
+  const endSession = async () => {
+    if (activeSessionId) {
+       // Save to history
+       storage.addFocusSession({
+           startTime: new Date(Date.now() - duration * 60000).toISOString(), // Approx start time
+           durationMinutes: duration,
+           completed: true,
+           appsBlockedCount: apps.filter(a => a.blocked).length
+       });
     }
+
+    setFocusModeActive(false);
+    setTimeRemaining(0);
+    setActiveSessionId(null);
+    localStorage.removeItem('focussphere_current_session');
+    
+    triggerExtensionSync(false);
+    toast.success("Focus session completed!");
   };
 
   // Countdown timer for focus mode
@@ -87,19 +106,7 @@ export default function SocialBlocker() {
       interval = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
-            // End session when timer reaches 0
-            if (activeSessionId && user) {
-              endSession(activeSessionId).then(() => {
-                setFocusModeActive(false);
-                setTimeRemaining(0);
-                setActiveSessionId(null);
-                toast.success("Focus session completed!");
-              });
-            } else {
-              setFocusModeActive(false);
-              setTimeRemaining(0);
-              setActiveSessionId(null);
-            }
+            endSession();
             return 0;
           }
           return prev - 1;
@@ -108,263 +115,85 @@ export default function SocialBlocker() {
     }
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusModeActive, timeRemaining, activeSessionId, user]);
+  }, [focusModeActive, timeRemaining]);
 
-  const fetchApps = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("blocked_apps")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const formattedApps: BlockedApp[] = (data || []).map((app) => ({
-        id: app.id,
-        name: app.name,
-        url: app.url,
-        blocked: app.blocked,
-        blockMode: app.block_mode as "always" | "focus",
-      }));
-
-      setApps(formattedApps);
-    } catch (error: unknown) {
-      console.error("Error fetching apps:", error);
-      toast.error("Failed to load blocked apps");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkActiveSession = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from("focus_sessions")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .single();
-
-      if (error && error.code !== "PGRST116") {
-        // PGRST116 is "no rows returned" which is fine
-        throw error;
-      }
-
-      if (data) {
-        setActiveSessionId(data.id);
-        const startedAt = new Date(data.started_at);
-        const now = new Date();
-        const elapsedMinutes = Math.floor((now.getTime() - startedAt.getTime()) / 60000);
-        const remaining = data.duration_minutes - elapsedMinutes;
-        
-        if (remaining > 0) {
-          setFocusModeActive(true);
-          setDuration(data.duration_minutes);
-          setTimeRemaining(remaining * 60); // Convert to seconds
-        } else {
-          // Session expired, end it
-          await endSession(data.id);
-        }
-      }
-    } catch (error: unknown) {
-      console.error("Error checking active session:", error);
-    }
-  };
-
-  const addApp = async () => {
-    if (!user) {
-      toast.error("Please log in to add apps");
-      return;
-    }
-
+  const addApp = () => {
     if (!newAppName.trim() || !newAppUrl.trim()) {
       toast.error("Please enter both app name and URL");
       return;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from("blocked_apps")
-        .insert({
-          user_id: user.id,
-          name: newAppName.trim(),
-          url: newAppUrl.trim(),
-          blocked: false,
-          block_mode: "focus",
-        })
-        .select()
-        .single();
+    const newApp = storage.saveBlockedApp({
+      name: newAppName.trim(),
+      url: newAppUrl.trim(),
+      blocked: false, // Default to not blocked? Or true? Original 'focus' mode implies unblocked until focus.
+      blockMode: "focus",
+    });
 
-      if (error) throw error;
-
-      const newApp: BlockedApp = {
-        id: data.id,
-        name: data.name,
-        url: data.url,
-        blocked: data.blocked,
-        blockMode: data.block_mode as "always" | "focus",
-      };
-
-      setApps((prev) => [...prev, newApp]);
-      setNewAppName("");
-      setNewAppUrl("");
-      setIsDialogOpen(false);
-      toast.success(`${newAppName} added to the list`);
-    } catch (error: unknown) {
-      console.error("Error adding app:", error);
-      toast.error("Failed to add app");
-    }
+    setApps(storage.getBlockedApps());
+    setNewAppName("");
+    setNewAppUrl("");
+    setIsDialogOpen(false);
+    toast.success(`${newAppName} added to the list`);
+    triggerExtensionSync();
   };
 
-  const removeApp = async (id: string) => {
-    if (!user) return;
+  const removeApp = (id: string) => {
+    storage.deleteBlockedApp(id);
+    setApps(storage.getBlockedApps());
+    toast.success("App removed");
+    triggerExtensionSync();
+  };
 
-    const app = apps.find((a) => a.id === id);
+  const toggleApp = (id: string) => {
+    storage.toggleAppBlock(id);
+    setApps(storage.getBlockedApps());
+    triggerExtensionSync();
+  };
+
+  const toggleBlockMode = (id: string) => {
+    storage.toggleAppBlockMode(id);
+    const updatedApps = storage.getBlockedApps();
+    setApps(updatedApps);
     
-    try {
-      const { error } = await supabase
-        .from("blocked_apps")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      setApps((prev) => prev.filter((app) => app.id !== id));
-      toast.success(`${app?.name} removed from the list`);
-    } catch (error: unknown) {
-      console.error("Error removing app:", error);
-      toast.error("Failed to remove app");
-    }
+    const app = updatedApps.find(a => a.id === id);
+    toast.success(`${app?.name} will be blocked ${app?.blockMode === "always" ? "always" : "only during focus mode"}`);
+    triggerExtensionSync();
   };
 
-  const toggleApp = async (id: string) => {
-    if (!user) return;
-
-    const app = apps.find((a) => a.id === id);
-    const newBlockedState = !app?.blocked;
-
-    try {
-      const { error } = await supabase
-        .from("blocked_apps")
-        .update({ blocked: newBlockedState })
-        .eq("id", id)
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      setApps((prev) =>
-        prev.map((app) =>
-          app.id === id ? { ...app, blocked: newBlockedState } : app
-        )
-      );
-    } catch (error: unknown) {
-      console.error("Error updating app:", error);
-      toast.error("Failed to update app");
-    }
-  };
-
-  const toggleBlockMode = async (id: string) => {
-    if (!user) return;
-
-    const app = apps.find((a) => a.id === id);
-    const newMode = app?.blockMode === "always" ? "focus" : "always";
-
-    try {
-      const { error } = await supabase
-        .from("blocked_apps")
-        .update({ block_mode: newMode })
-        .eq("id", id)
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      setApps((prev) =>
-        prev.map((app) =>
-          app.id === id ? { ...app, blockMode: newMode } : app
-        )
-      );
-      toast.success(`${app?.name} will be blocked ${newMode === "always" ? "always" : "only during focus mode"}`);
-    } catch (error: unknown) {
-      console.error("Error updating block mode:", error);
-      toast.error("Failed to update block mode");
-    }
-  };
-
-  const startFocusMode = async () => {
-    if (!user) {
-      toast.error("Please log in to start focus mode");
-      return;
-    }
-
+  const startFocusMode = () => {
     const blockedCount = apps.filter((app) => app.blocked).length;
     if (blockedCount === 0) {
       toast.error("Please select at least one app to block");
       return;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from("focus_sessions")
-        .insert({
-          user_id: user.id,
-          duration_minutes: duration,
-          is_active: true,
-          apps_blocked_count: blockedCount,
-        })
-        .select()
-        .single();
+    const id = crypto.randomUUID();
+    const endTime = Date.now() + duration * 60 * 1000;
+    
+    localStorage.setItem('focussphere_current_session', JSON.stringify({
+        id,
+        endTime,
+        duration,
+        startTime: Date.now()
+    }));
 
-      if (error) throw error;
-
-      setActiveSessionId(data.id);
-      setFocusModeActive(true);
-      setTimeRemaining(duration * 60); // Convert minutes to seconds
-      
-      // Sync with extension using helper
-      syncWithExtensionHelper(user.id, true, session?.access_token);
-      
-      // Also store in localStorage
-      localStorage.setItem('focussphere_sync', JSON.stringify({
-        userId: user.id,
-        accessToken: session?.access_token,
-        focusMode: true,
-        timestamp: Date.now()
-      }));
-      
-      toast.success(`Focus Mode activated! ${blockedCount} apps blocked for ${duration} minutes`);
-    } catch (error: unknown) {
-      console.error("Error starting focus mode:", error);
-      toast.error("Failed to start focus mode");
-    }
+    setActiveSessionId(id);
+    setFocusModeActive(true);
+    setTimeRemaining(duration * 60); 
+    
+    triggerExtensionSync(true);
+    
+    toast.success(`Focus Mode activated! ${blockedCount} apps blocked for ${duration} minutes`);
   };
 
-  const stopFocusMode = async () => {
-    if (activeSessionId) {
-      await endSession(activeSessionId);
-    }
-
+  const stopFocusMode = () => {
     setFocusModeActive(false);
     setTimeRemaining(0);
     setActiveSessionId(null);
+    localStorage.removeItem('focussphere_current_session');
     
-    // Sync with extension
-    syncWithExtensionHelper(user?.id || '', false, session?.access_token);
-    
-    if (user) {
-      localStorage.setItem('focussphere_sync', JSON.stringify({
-        userId: user.id,
-        accessToken: session?.access_token,
-        focusMode: false,
-        timestamp: Date.now()
-      }));
-    }
-    
+    triggerExtensionSync(false);
     toast.success("Focus Mode deactivated");
   };
 
@@ -374,33 +203,28 @@ export default function SocialBlocker() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const syncWithExtension = async () => {
-    if (!user) {
-      toast.error('Please log in to sync with extension');
-      return;
-    }
-
-    try {
-      // Store sync data in localStorage for content script to pick up
-      localStorage.setItem('focussphere_sync', JSON.stringify({
-        userId: user.id,
-        accessToken: session?.access_token,
-        focusMode: focusModeActive,
-        timestamp: Date.now()
-      }));
-
-      // Use helper to push data
-      const result = await syncWithExtensionHelper(user.id, focusModeActive, session?.access_token);
+  const triggerExtensionSync = (active: boolean = focusModeActive) => {
+      // We pass the Full list of apps + Focus State to the extension
+      // We can use the helper, but we might need to update it to accept 'apps'
+      // Or just write to localStorage where extension reads it.
       
-      if (result.success) {
-        toast.success('Sync signal sent to extension. Check extension popup.');
-      } else {
-        toast.info('Sync signal sent. Please check extension.');
-      }
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      toast.error('Failed to sync: ' + errorMessage);
-    }
+      const syncData = {
+          userId: user?.id || 'local-user', // Fallback ID
+          accessToken: 'local-token', 
+          focusMode: active,
+          blockedApps: storage.getBlockedApps(), // NEW: Pass apps directly
+          timestamp: Date.now()
+      };
+      
+      localStorage.setItem('focussphere_sync', JSON.stringify(syncData));
+      
+      // Also try to send message if helper allows
+      syncWithExtensionHelper(user?.id || 'local', active, undefined);
+  };
+
+  const handleManualSync = () => {
+      triggerExtensionSync();
+      toast.success('Sync signal sent to extension.');
   };
 
   return (
@@ -433,12 +257,12 @@ export default function SocialBlocker() {
               </ol>
             </div>
             <Button
-              onClick={syncWithExtension}
+              onClick={handleManualSync}
               variant="outline"
               size="sm"
               className="mt-3 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900"
             >
-              Try Syncing with Extension
+              Sync with Extension
             </Button>
           </div>
         </div>

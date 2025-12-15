@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { storage, Task } from "@/lib/storage";
 import {
   Dialog,
   DialogContent,
@@ -14,31 +15,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-interface Task {
-  id: string;
-  title: string;
-  notes: string;
-  datetime: string;
-  completed: boolean;
-}
-
 export default function Tasks() {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: "1",
-      title: "Complete project proposal",
-      notes: "Review and finalize the Q1 project proposal",
-      datetime: "2025-11-07T14:00",
-      completed: false,
-    },
-    {
-      id: "2",
-      title: "Team meeting",
-      notes: "Weekly sync with the development team",
-      datetime: "2025-11-07T10:00",
-      completed: true,
-    },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [formData, setFormData] = useState({
@@ -47,6 +25,12 @@ export default function Tasks() {
     datetime: "",
   });
 
+  useEffect(() => {
+    setTasks(storage.getTasks());
+    // Force sync to ensure extension has latest data even if no changes made yet
+    storage.forceSync();
+  }, []);
+
   const handleSubmit = () => {
     if (!formData.title || !formData.datetime) {
       toast.error("Please fill in all required fields");
@@ -54,23 +38,22 @@ export default function Tasks() {
     }
 
     if (editingTask) {
-      setTasks(
-        tasks.map((task) =>
-          task.id === editingTask.id
-            ? { ...task, ...formData }
-            : task
-        )
-      );
+      const updatedTask = { ...editingTask, ...formData };
+      storage.saveTask(updatedTask);
       toast.success("Task updated successfully");
     } else {
-      const newTask: Task = {
-        id: Date.now().toString(),
+      const newTask = {
+        id: Date.now().toString(), // Helper in storage handles this if omitted, but for now we do it here or let storage handle it. logic in storage.ts expects full task for update or new task.
         ...formData,
         completed: false,
       };
-      setTasks([...tasks, newTask]);
+      // actually saveTask handles ID generation if we want, but let's stick to what we defined
+      storage.saveTask(newTask as Task); 
       toast.success("Task added successfully");
     }
+    
+    // Refresh tasks
+    setTasks(storage.getTasks());
 
     setFormData({ title: "", notes: "", datetime: "" });
     setEditingTask(null);
@@ -78,15 +61,17 @@ export default function Tasks() {
   };
 
   const toggleComplete = (id: string) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.completed = !task.completed;
+      storage.saveTask(task);
+      setTasks(storage.getTasks());
+    }
   };
 
   const deleteTask = (id: string) => {
-    setTasks(tasks.filter((task) => task.id !== id));
+    storage.deleteTask(id);
+    setTasks(storage.getTasks());
     toast.success("Task deleted");
   };
 

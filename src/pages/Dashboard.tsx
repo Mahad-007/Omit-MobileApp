@@ -1,26 +1,41 @@
 import { DashboardCard } from "@/components/DashboardCard";
-import { Shield, CheckSquare, Sparkles, TrendingUp, Clock } from "lucide-react";
+import { Shield, CheckSquare, Sparkles, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-
-const productivityData = [
-  { time: "9 AM", saved: 0.3, wasted: 0.1 },
-  { time: "10 AM", saved: 0.8, wasted: 0.2 },
-  { time: "11 AM", saved: 1.5, wasted: 0.3 },
-  { time: "12 PM", saved: 2.0, wasted: 0.4 },
-  { time: "1 PM", saved: 2.3, wasted: 0.5 },
-  { time: "2 PM", saved: 3.0, wasted: 0.6 },
-  { time: "3 PM", saved: 3.8, wasted: 0.7 },
-  { time: "4 PM", saved: 4.5, wasted: 0.8 },
-];
+import { useEffect, useState } from "react";
+import { storage } from "@/lib/storage";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const latestData = productivityData[productivityData.length - 1];
-  const totalSaved = latestData.saved;
-  const totalWasted = latestData.wasted;
+  const [productivityData, setProductivityData] = useState<{time: string, saved: number, wasted: number}[]>([]);
+  const [stats, setStats] = useState({ saved: 0, wasted: 0, efficiency: 0 });
+  const [blockedCount, setBlockedCount] = useState(0);
+  const [completedTasks, setCompletedTasks] = useState(0);
+  const [totalTasks, setTotalTasks] = useState(0);
+  const [sessionCount, setSessionCount] = useState(0);
+
+  useEffect(() => {
+    // Load initial data
+    const loadData = () => {
+      setProductivityData(storage.getProductivityData());
+      setStats(storage.getTotalStats());
+      setBlockedCount(storage.getBlockedApps().length);
+      
+      const tasks = storage.getTasks();
+      setTotalTasks(tasks.length);
+      setCompletedTasks(tasks.filter(t => t.completed).length);
+      
+      setSessionCount(storage.getFocusSessions().length);
+    };
+
+    loadData();
+
+    // Optional: Refresh every minute just in case
+    const interval = setInterval(loadData, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -45,11 +60,11 @@ export default function Dashboard() {
           <CardContent className="space-y-6">
             <div className="space-y-6 text-center">
               <div className="space-y-3 p-6 rounded-xl bg-gradient-accent border border-success/20 shadow-soft">
-                <div className="text-6xl font-bold text-success drop-shadow-sm">{totalSaved.toFixed(1)}h</div>
+                <div className="text-6xl font-bold text-success drop-shadow-sm">{stats.saved.toFixed(1)}h</div>
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Time Saved</p>
               </div>
               <div className="space-y-3 opacity-60 p-4 rounded-xl bg-card/50 border border-border/50">
-                <div className="text-3xl font-semibold text-destructive">{totalWasted.toFixed(1)}h</div>
+                <div className="text-3xl font-semibold text-destructive">{stats.wasted.toFixed(1)}h</div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Time Wasted</p>
               </div>
             </div>
@@ -59,8 +74,8 @@ export default function Dashboard() {
                 <PieChart>
                   <Pie
                     data={[
-                      { name: "Time Saved", value: totalSaved },
-                      { name: "Time Wasted", value: totalWasted }
+                      { name: "Time Saved", value: stats.saved },
+                      { name: "Time Wasted", value: stats.wasted }
                     ]}
                     cx="50%"
                     cy="50%"
@@ -95,15 +110,18 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-3 gap-4 pt-6 mt-2 border-t border-border/50">
               <div className="text-center p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
-                <div className="text-2xl font-bold text-primary">87%</div>
+                <div className="text-2xl font-bold text-primary">{stats.efficiency}%</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Efficiency</div>
               </div>
               <div className="text-center p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
-                <div className="text-2xl font-bold text-foreground">6</div>
+                <div className="text-2xl font-bold text-foreground">{sessionCount}</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Sessions</div>
               </div>
+              {/* Calculating average session time if sessions exist */}
               <div className="text-center p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
-                <div className="text-2xl font-bold text-foreground">45m</div>
+                <div className="text-2xl font-bold text-foreground">
+                  {sessionCount > 0 ? (stats.saved / sessionCount * 60).toFixed(0) : 0}m
+                </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Avg Session</div>
               </div>
             </div>
@@ -116,8 +134,8 @@ export default function Dashboard() {
             title="Blocked Sites"
             description="Distractions avoided"
             icon={Shield}
-            value="12"
-            trend="+3 today"
+            value={blockedCount.toString()}
+            trend="Active protection"
           >
             <Button
               onClick={() => navigate("/blocker")}
@@ -131,8 +149,8 @@ export default function Dashboard() {
             title="Tasks Completed"
             description="Keep up the momentum!"
             icon={CheckSquare}
-            value="8/15"
-            trend="53% complete"
+            value={`${completedTasks}/${totalTasks}`}
+            trend={totalTasks > 0 ? `${Math.round((completedTasks/totalTasks)*100)}% complete` : "No tasks"}
           >
             <Button
               onClick={() => navigate("/tasks")}

@@ -85,6 +85,7 @@ window.addEventListener('message', (event) => {
   if (event.source !== window) return;
 
   if (event.data.type && (event.data.type === 'FOCUS_SPHERE_SYNC')) {
+    // Send message to background script
     chrome.runtime.sendMessage(event.data.payload);
   }
 });
