@@ -19,15 +19,94 @@ export function Header() {
   const [focusTime, setFocusTime] = useState(0);
   const [isActive, setIsActive] = useState(false);
 
+  // Initialize state from localStorage
+  useEffect(() => {
+    const savedState = localStorage.getItem("focusTimerState");
+    if (savedState) {
+      const { isActive: savedIsActive, startTime, accumulatedTime } = JSON.parse(savedState);
+      
+      if (savedIsActive && startTime) {
+        setIsActive(true);
+        // Calculate current elapsed time immediately
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        setFocusTime(accumulatedTime + elapsed);
+      } else {
+        setIsActive(false);
+        setFocusTime(accumulatedTime || 0);
+      }
+    }
+  }, []);
+
+  // Timer interval
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    
     if (isActive) {
       interval = setInterval(() => {
-        setFocusTime((time) => time + 1);
+        // Recalculate based on start time to prevent drift and handle refreshes
+        const savedState = localStorage.getItem("focusTimerState");
+        if (savedState) {
+          const { startTime, accumulatedTime } = JSON.parse(savedState);
+          if (startTime) {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            setFocusTime(accumulatedTime + elapsed);
+          }
+        }
       }, 1000);
     }
+    
     return () => clearInterval(interval);
   }, [isActive]);
+
+  const toggleTimer = () => {
+    const newState = !isActive;
+    setIsActive(newState);
+    
+    const now = Date.now();
+    let currentAccumulated = focusTime; // This serves as the base
+    
+    // If we are getting current state from storage to be safe
+    const savedStateStr = localStorage.getItem("focusTimerState");
+    let savedStartTime = null;
+    let savedAccumulated = 0;
+    
+    if (savedStateStr) {
+      const parsed = JSON.parse(savedStateStr);
+      savedAccumulated = parsed.accumulatedTime || 0;
+      savedStartTime = parsed.startTime;
+    }
+
+    if (newState) {
+      // STARTING
+      // If we were paused, our displayed focusTime is the accumulated time.
+      // We set start time to NOW.
+      // Accumulated remains what it was.
+      
+      const stateToSave = {
+        isActive: true,
+        startTime: now,
+        accumulatedTime: savedAccumulated // Keep existing accumulated
+      };
+      localStorage.setItem("focusTimerState", JSON.stringify(stateToSave));
+      
+    } else {
+      // PAUSING
+      // Calculate final accumulated time
+      // New accumulated = Old accumulated + (Now - StartTime)
+      if (savedStartTime) {
+        const elapsed = Math.floor((now - savedStartTime) / 1000);
+        currentAccumulated = savedAccumulated + elapsed;
+      }
+      
+      const stateToSave = {
+        isActive: false,
+        startTime: null,
+        accumulatedTime: currentAccumulated
+      };
+      localStorage.setItem("focusTimerState", JSON.stringify(stateToSave));
+      setFocusTime(currentAccumulated);
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -70,7 +149,7 @@ export function Header() {
             <p className="text-lg font-bold text-foreground">{formatTime(focusTime)}</p>
           </div>
           <button
-            onClick={() => setIsActive(!isActive)}
+            onClick={toggleTimer}
             className="ml-2 px-3 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
             {isActive ? "Pause" : "Start"}

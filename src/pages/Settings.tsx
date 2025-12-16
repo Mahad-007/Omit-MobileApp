@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
   const [notifications, setNotifications] = useState(true);
   const [strictMode, setStrictMode] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
 
   const saveSettings = () => {
     toast.success("Settings saved successfully!");
@@ -108,7 +110,7 @@ export default function Settings() {
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-secondary">
               <p className="text-sm font-medium mb-1">Email</p>
-              <p className="text-sm text-muted-foreground">user@example.com</p>
+              <p className="text-sm text-muted-foreground">{user?.email || "Not logged in"}</p>
             </div>
             <div className="p-4 rounded-lg bg-secondary">
               <p className="text-sm font-medium mb-1">Member Since</p>

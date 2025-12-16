@@ -32,8 +32,8 @@ export default function Tasks() {
   }, []);
 
   const handleSubmit = () => {
-    if (!formData.title || !formData.datetime) {
-      toast.error("Please fill in all required fields");
+    if (!formData.title) {
+      toast.error("Please fill in the title");
       return;
     }
 
@@ -117,7 +117,7 @@ export default function Tasks() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Date & Time *</label>
+                <label className="text-sm font-medium mb-2 block">Date & Time</label>
                 <Input
                   type="datetime-local"
                   value={formData.datetime}
@@ -172,9 +172,11 @@ export default function Tasks() {
                     {task.notes && (
                       <p className="text-sm text-muted-foreground mt-1">{task.notes}</p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {new Date(task.datetime).toLocaleString()}
-                    </p>
+                    {task.datetime && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {new Date(task.datetime).toLocaleString()}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button

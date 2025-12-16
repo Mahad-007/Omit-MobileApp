@@ -55,13 +55,16 @@ document.addEventListener('DOMContentLoaded', () => {
             div.style.borderRadius = '5px';
             div.style.fontSize = '14px';
             
-            const dateObj = new Date(task.datetime);
-            const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            let dateStr = '';
+            if (task.datetime) {
+                const dateObj = new Date(task.datetime);
+                dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
 
             div.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div style="font-weight: 600;">${escapeHtml(task.title)}</div>
-                    <div style="font-size: 11px; opacity: 0.6; white-space: nowrap; margin-left: 8px;">${dateStr}</div>
+                    ${dateStr ? `<div style="font-size: 11px; opacity: 0.6; white-space: nowrap; margin-left: 8px;">${dateStr}</div>` : ''}
                 </div>
                 ${task.notes ? `<div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">${escapeHtml(task.notes)}</div>` : ''}
             `;
