@@ -188,6 +188,13 @@ export default function SocialBlocker() {
   };
 
   const stopFocusMode = () => {
+    // Check for strict mode
+    const settings = storage.getSettings();
+    if (settings.strictMode && timeRemaining > 0) {
+      toast.error("Strict Mode is active: Cannot stop session until timer expires!");
+      return;
+    }
+
     setFocusModeActive(false);
     setTimeRemaining(0);
     setActiveSessionId(null);
@@ -318,7 +325,7 @@ export default function SocialBlocker() {
                           onClick={() => toggleBlockMode(app.id)}
                           className="text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          {app.blockMode === "always" ? "Focus Only" : "Always Block"}
+                          {app.blockMode === "always" ? "Set to Focus Only" : "Set to Always Block"}
                         </Button>
                         <Switch
                           id={app.id}

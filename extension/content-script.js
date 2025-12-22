@@ -77,6 +77,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     return true;
   }
+  
+  // Relay saved time to web app
+  if (request.action === 'addSavedTime') {
+      window.postMessage({
+          type: 'FOCUS_SPHERE_ADD_TIME',
+          payload: { hours: request.hours }
+      }, '*');
+      sendResponse({ success: true });
+      return true;
+  }
 });
 
 // Listen for messages from the web app

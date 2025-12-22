@@ -21,7 +21,24 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+import { useEffect } from "react";
+import { storage } from "@/lib/storage";
+
+const App = () => {
+    useEffect(() => {
+        // Listen for time saved updates from the extension
+        const handleTimeUpdate = (event: MessageEvent) => {
+            if (event.data?.type === 'FOCUS_SPHERE_ADD_TIME' && event.data?.payload?.hours) {
+                console.log('[App] Received saved time update:', event.data.payload.hours);
+                storage.addSavedTime(event.data.payload.hours);
+            }
+        };
+
+        window.addEventListener('message', handleTimeUpdate);
+        return () => window.removeEventListener('message', handleTimeUpdate);
+    }, []);
+
+    return (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <TooltipProvider>
@@ -61,5 +78,6 @@ const App = () => (
     </ThemeProvider>
   </QueryClientProvider>
 );
+};
 
 export default App;

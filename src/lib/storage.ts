@@ -30,11 +30,19 @@ export interface DailyStats {
   wastedHours: number;
 }
 
+export interface Settings {
+  taskReminders: boolean;
+  focusAlerts: boolean;
+  strictMode: boolean;
+  defaultFocusDuration: number;
+}
+
 const STORAGE_KEYS = {
   TASKS: 'focussphere_tasks',
   BLOCKED_APPS: 'focussphere_blocked_apps',
   FOCUS_SESSIONS: 'focussphere_focus_sessions',
   DAILY_STATS: 'focussphere_daily_stats',
+  SETTINGS: 'focussphere_settings',
 };
 
 class LocalStorageService {
@@ -43,7 +51,22 @@ class LocalStorageService {
     try {
         const tasks = this.getTasks().filter(t => !t.completed); 
         const blockedApps = this.getBlockedApps();
+        const settings = this.getSettings();
         
+        // CHECK FOR ACTIVE SESSION
+        let isFocusActive = false;
+        try {
+            const sessionData = localStorage.getItem('focussphere_current_session');
+            if (sessionData) {
+                const session = JSON.parse(sessionData);
+                if (session.endTime > Date.now()) {
+                    isFocusActive = true;
+                }
+            }
+        } catch (e) {
+            console.error("Error checking focus session", e);
+        }
+
         const existingStr = localStorage.getItem('focussphere_sync');
         let syncData: any = {};
         if (existingStr) {
@@ -52,6 +75,8 @@ class LocalStorageService {
         
         syncData.tasks = tasks;
         syncData.blockedApps = blockedApps;
+        syncData.settings = settings;
+        syncData.focusMode = isFocusActive; // Explicitly set focus mode based on session validity
         syncData.timestamp = Date.now();
         
         localStorage.setItem('focussphere_sync', JSON.stringify(syncData));
@@ -71,6 +96,23 @@ class LocalStorageService {
 
   private _updateExtensionSync() {
       this.forceSync();
+  }
+
+  // --- SETTINGS ---
+  getSettings(): Settings {
+    const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    return data ? JSON.parse(data) : { 
+      taskReminders: true, 
+      focusAlerts: true,
+      strictMode: false,
+      defaultFocusDuration: 60
+    };
+  }
+
+  saveSettings(settings: Settings): Settings {
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    this._updateExtensionSync();
+    return settings;
   }
 
   // --- TASKS ---
@@ -103,7 +145,38 @@ class LocalStorageService {
   // --- BLOCKED APPS ---
   getBlockedApps(): BlockedApp[] {
     const data = localStorage.getItem(STORAGE_KEYS.BLOCKED_APPS);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    
+    try {
+        const rawApps: any[] = JSON.parse(data);
+        if (!Array.isArray(rawApps)) return [];
+        
+        // Deduplicate and Sanitize
+        const uniqueApps = new Map<string, BlockedApp>();
+        
+        rawApps.forEach(app => {
+            if (!app.id || !app.url) return;
+            
+            // Ensure boolean
+            const blocked = app.blocked === true || app.blocked === "true";
+            
+            // Ensure valid mode
+            const blockMode = (app.blockMode === "focus" || app.blockMode === "always") 
+                ? app.blockMode 
+                : "focus"; // Default to focus only for safety
+            
+            uniqueApps.set(app.id, {
+                ...app,
+                blocked,
+                blockMode
+            });
+        });
+        
+        return Array.from(uniqueApps.values());
+    } catch (e) {
+        console.error("Error parsing blocked apps", e);
+        return [];
+    }
   }
 
   saveBlockedApp(app: Omit<BlockedApp, 'id'> | BlockedApp): BlockedApp {
@@ -214,6 +287,12 @@ class LocalStorageService {
       });
     }
     localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
+  }
+  
+  // Real-time accumulation from Extension
+  addSavedTime(hours: number) {
+      if (hours <= 0) return;
+      this.updateDailyStats(hours, 0);
   }
   
   // For the chart

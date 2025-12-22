@@ -8,14 +8,27 @@ import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function Settings() {
-  const [notifications, setNotifications] = useState(true);
-  const [strictMode, setStrictMode] = useState(false);
-  const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
+import { storage } from "@/lib/storage";
 
-  const saveSettings = () => {
-    toast.success("Settings saved successfully!");
+export default function Settings() {
+  const [settings, setSettings] = useState(storage.getSettings());
+  const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAuth();
+
+  const handleSettingChange = (key: keyof typeof settings, value: boolean | number) => {
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+    storage.saveSettings(newSettings);
+    toast.success("Settings saved!");
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out successfully");
+    } catch (error) {
+      toast.error("Failed to sign out");
+    }
   };
 
   return (
@@ -37,8 +50,8 @@ export default function Settings() {
               </div>
               <Switch
                 id="task-reminders"
-                checked={notifications}
-                onCheckedChange={setNotifications}
+                checked={settings.taskReminders}
+                onCheckedChange={(checked) => handleSettingChange('taskReminders', checked)}
               />
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg bg-secondary">
@@ -48,7 +61,11 @@ export default function Settings() {
                 </Label>
                 <p className="text-sm text-muted-foreground">Alerts when you visit blocked sites</p>
               </div>
-              <Switch id="focus-alerts" defaultChecked />
+              <Switch 
+                id="focus-alerts" 
+                checked={settings.focusAlerts}
+                onCheckedChange={(checked) => handleSettingChange('focusAlerts', checked)}
+              />
             </div>
           </div>
         </DashboardCard>
@@ -87,8 +104,8 @@ export default function Settings() {
               </div>
               <Switch
                 id="strict-mode"
-                checked={strictMode}
-                onCheckedChange={setStrictMode}
+                checked={settings.strictMode}
+                onCheckedChange={(checked) => handleSettingChange('strictMode', checked)}
               />
             </div>
             <div className="p-4 rounded-lg bg-secondary">
@@ -97,7 +114,8 @@ export default function Settings() {
               </Label>
               <input
                 type="number"
-                defaultValue={60}
+                value={settings.defaultFocusDuration}
+                onChange={(e) => handleSettingChange('defaultFocusDuration', Number(e.target.value))}
                 className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground"
                 min="5"
                 max="480"
@@ -116,17 +134,15 @@ export default function Settings() {
               <p className="text-sm font-medium mb-1">Member Since</p>
               <p className="text-sm text-muted-foreground">November 2025</p>
             </div>
-            <Button variant="destructive" className="w-full">
+            <Button variant="destructive" className="w-full" onClick={handleSignOut}>
               Sign Out
             </Button>
           </div>
         </DashboardCard>
       </div>
 
-      <div className="flex justify-end">
-        <Button onClick={saveSettings} className="bg-gradient-primary hover:opacity-90 px-8">
-          Save Settings
-        </Button>
+      <div className="flex justify-end pt-4">
+         <p className="text-sm text-muted-foreground">Settings are saved automatically</p>
       </div>
     </div>
   );
