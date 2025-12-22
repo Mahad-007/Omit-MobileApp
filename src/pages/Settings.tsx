@@ -35,7 +35,7 @@ export default function Settings() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h2 className="text-3xl font-bold text-foreground mb-2">Settings</h2>
-        <p className="text-muted-foreground">Customize your FocusSphere experience</p>
+        <p className="text-muted-foreground">Customize your Omit experience</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

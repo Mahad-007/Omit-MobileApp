@@ -83,7 +83,7 @@ class LocalStorageService {
         
         // Notify extension immediately via window message
         window.postMessage({
-            type: 'FOCUS_SPHERE_SYNC',
+            type: 'OMIT_SYNC',
             payload: {
                 action: 'updateSyncData', // Direct update
                 syncData: syncData

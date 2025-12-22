@@ -250,7 +250,7 @@ export default function SocialBlocker() {
               Install Browser Extension to Block Websites
             </h3>
             <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
-              To actually block websites like Instagram, you need to install the FocusSphere browser extension. 
+              To actually block websites like Instagram, you need to install the Omit browser extension. 
               The extension will sync with your blocked sites list and prevent access to distracting websites.
             </p>
             <div className="space-y-2 text-sm">

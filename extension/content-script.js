@@ -81,7 +81,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Relay saved time to web app
   if (request.action === 'addSavedTime') {
       window.postMessage({
-          type: 'FOCUS_SPHERE_ADD_TIME',
+          type: 'OMIT_ADD_TIME',
           payload: { hours: request.hours }
       }, '*');
       sendResponse({ success: true });
@@ -94,7 +94,7 @@ window.addEventListener('message', (event) => {
   // We only accept messages from ourselves
   if (event.source !== window) return;
 
-  if (event.data.type && (event.data.type === 'FOCUS_SPHERE_SYNC')) {
+  if (event.data.type && (event.data.type === 'OMIT_SYNC')) {
     // Send message to background script
     chrome.runtime.sendMessage(event.data.payload);
   }

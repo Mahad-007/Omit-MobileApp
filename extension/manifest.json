@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "FocusSphere Blocker",
+  "name": "Omit",
   "version": "1.0.0",
-  "description": "Block distracting websites and stay focused with FocusSphere",
+  "description": "Block distracting websites and stay focused with Omit",
   "permissions": [
     "storage",
     "tabs",

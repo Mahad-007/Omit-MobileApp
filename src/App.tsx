@@ -28,7 +28,7 @@ const App = () => {
     useEffect(() => {
         // Listen for time saved updates from the extension
         const handleTimeUpdate = (event: MessageEvent) => {
-            if (event.data?.type === 'FOCUS_SPHERE_ADD_TIME' && event.data?.payload?.hours) {
+            if (event.data?.type === 'OMIT_ADD_TIME' && event.data?.payload?.hours) {
                 console.log('[App] Received saved time update:', event.data.payload.hours);
                 storage.addSavedTime(event.data.payload.hours);
             }
