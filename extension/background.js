@@ -17,14 +17,18 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // Try to get user data from web app on install
   setTimeout(() => {
-    getUserDataFromWebApp();
+    getUserDataFromWebApp().catch(() => {
+      // Silently ignore - app may not be open yet
+    });
   }, 2000);
 });
 
 // Also try to get user data when extension starts
 chrome.runtime.onStartup.addListener(() => {
   setTimeout(() => {
-    getUserDataFromWebApp();
+    getUserDataFromWebApp().catch(() => {
+      // Silently ignore - app may not be open yet
+    });
   }, 2000);
 });
 
@@ -236,7 +240,9 @@ chrome.alarms.create(TIME_TRACKING_ALARM, { periodInMinutes: 1 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "syncBlockedSites") {
-    getUserDataFromWebApp();
+    getUserDataFromWebApp().catch(() => {
+      // Silently ignore - app may not be open
+    });
   } else if (alarm.name === TIME_TRACKING_ALARM) {
     await trackTimeSaved();
   }
@@ -350,6 +356,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           syncFromPayload(data);
           sendResponse({ success: true });
         }
+      }).catch((error) => {
+        sendResponse({ success: false, error: error.message });
       });
       return true;
     }
@@ -384,6 +392,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'getUserDataFromWebApp') {
       getUserDataFromWebApp().then(data => {
         sendResponse({ userData: data });
+      }).catch((error) => {
+        sendResponse({ userData: null, error: error.message });
       });
       return true;
     }
@@ -429,6 +439,8 @@ chrome.runtime.onMessageExternal.addListener(
         } else {
           sendResponse({ success: false, error: "No data found" });
         }
+      }).catch((error) => {
+        sendResponse({ success: false, error: error.message });
       });
       return true;
     }
@@ -496,11 +508,7 @@ async function getUserDataFromWebApp() {
 
 // Periodic check
 chrome.alarms.create("syncBlockedSites", { periodInMinutes: 1 });
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "syncBlockedSites") {
-    getUserDataFromWebApp();
-  }
-});
+// Note: The syncBlockedSites alarm is handled in the first onAlarm listener above
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local") {
@@ -565,12 +573,10 @@ function scheduleNextReminder() {
     console.log(`[FocusSphere] Next reminder in ${delayMinutes.toFixed(1)} minutes`);
 }
 
+// Note: All alarm handlers are consolidated in the first onAlarm listener at line 237
+// Adding the REMINDER_ALARM case there
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-    if (alarm.name === "syncBlockedSites") {
-      getUserDataFromWebApp();
-    } else if (alarm.name === TIME_TRACKING_ALARM) {
-      await trackTimeSaved();
-    } else if (alarm.name === REMINDER_ALARM) {
+    if (alarm.name === REMINDER_ALARM) {
         await checkTaskReminders();
         scheduleNextReminder(); // Reschedule after firing
     }
