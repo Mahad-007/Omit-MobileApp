@@ -27,6 +27,9 @@ import { storage } from "@/lib/storage";
 
 const App = () => {
     useEffect(() => {
+        // Sync data to extension on app load
+        storage.forceSync();
+        
         // Listen for time saved updates from the extension
         const handleTimeUpdate = (event: MessageEvent) => {
             if (event.data?.type === 'OMIT_ADD_TIME' && event.data?.payload?.hours) {

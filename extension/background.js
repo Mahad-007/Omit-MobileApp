@@ -284,6 +284,8 @@ async function syncToWebApp() {
       "http://127.0.0.1:8080",
       "http://localhost:5173",
       "http://127.0.0.1:5173",
+      "https://omit.software",
+      "https://www.omit.software",
     ];
 
     for (const tab of tabs) {
@@ -319,16 +321,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     // User asking to check local storage of the web page
     if (request.action === "sync") {
-      getUserDataFromWebApp().then((data) => {
-        if (data) {
-          syncFromPayload(data);
-          // Also try to push any pending time
-          syncToWebApp();
-          sendResponse({ success: true });
-        } else {
-          sendResponse({ success: false, error: "No data found in web app" });
-        }
-      });
+      getUserDataFromWebApp()
+        .then((data) => {
+          if (data) {
+            syncFromPayload(data);
+            // Also try to push any pending time
+            syncToWebApp();
+            sendResponse({ success: true });
+          } else {
+            sendResponse({ success: false, error: "No data found in App" });
+          }
+        })
+        .catch((error) => {
+            console.error("Sync error:", error);
+            let msg = "Sync Error";
+            if (error.message === "App not open") msg = "App not open";
+            if (error.message === "Reload App") msg = "Reload App";
+            
+            sendResponse({ success: false, error: msg });
+        });
       return true;
     }
 
@@ -393,6 +404,8 @@ chrome.runtime.onMessageExternal.addListener(
       "http://127.0.0.1:8080",
       "http://localhost:5173",
       "http://127.0.0.1:5173",
+      "https://omit.software",
+      "https://www.omit.software",
     ];
     if (!allowedOrigins.some((origin) => sender.origin.startsWith(origin))) {
       sendResponse({ success: false, error: "Unauthorized origin" });
@@ -429,26 +442,53 @@ chrome.runtime.onMessageExternal.addListener(
 async function getUserDataFromWebApp() {
   try {
     const tabs = await chrome.tabs.query({});
+    let checkedCount = 0;
+    let appTabFound = false;
+    let appTabResponsive = false;
 
     // Check localStorage sync data
     for (const tab of tabs) {
-      try {
-        const response = await chrome.tabs.sendMessage(tab.id, {
-          action: "checkLocalStorage",
-        });
-        if (response && response.syncData) {
-          const data = JSON.parse(response.syncData);
-          if (data) {
-            await syncFromPayload(data);
-            return data;
+      // optimization: only check tabs that match our app origins
+      if (tab.url && (
+          tab.url.includes("localhost:5173") || 
+          tab.url.includes("omit.software") || 
+          tab.url.includes("www.omit.software") ||
+          tab.url.includes("127.0.0.1:5173")
+      )) {
+          appTabFound = true;
+          try {
+            const response = await chrome.tabs.sendMessage(tab.id, {
+              action: "checkLocalStorage",
+            });
+            appTabResponsive = true;
+            checkedCount++;
+            
+            if (response && response.syncData) {
+              const data = JSON.parse(response.syncData);
+              if (data) {
+                await syncFromPayload(data);
+                return data;
+              }
+            }
+          } catch (error) {
+            // Tab might be loading or content script not ready
+            console.log("Error checking tab " + tab.id, error);
+            continue;
           }
-        }
-      } catch (error) {
-        continue;
       }
     }
-    return null;
+    
+    if (!appTabFound) {
+        throw new Error("App not open");
+    }
+
+    if (!appTabResponsive) {
+        throw new Error("Reload App");
+    }
+    
+    return null; // App responsive but no data found
   } catch (error) {
+    if (error.message === "App not open" || error.message === "Reload App") throw error;
     console.error("Error getting user data from web app:", error);
     return null;
   }

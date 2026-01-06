@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
               syncBtn.textContent = 'Sync with App';
               syncBtn.disabled = false;
-            }, 2000);
+            }, 3000);
           }
         });
       });
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Settings button
   settingsBtn.addEventListener('click', () => {
-    chrome.tabs.create({ url: 'http://localhost:5173/blocker' });
+    chrome.tabs.create({ url: 'https://omit.software/blocker' });
   });
 });
 

@@ -94,7 +94,7 @@ window.addEventListener('message', (event) => {
   // We only accept messages from ourselves
   if (event.source !== window) return;
 
-  if (event.data.type && (event.data.type === 'OMIT_SYNC')) {
+  if (event.data.type && (event.data.type === 'OMIT_SYNC' || event.data.type === 'FOCUS_SPHERE_SYNC')) {
     // Send message to background script
     chrome.runtime.sendMessage(event.data.payload);
   }
