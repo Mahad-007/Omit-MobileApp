@@ -22,11 +22,11 @@ export default function Dashboard() {
       setProductivityData(storage.getProductivityData());
       setStats(storage.getTotalStats());
       setBlockedCount(storage.getBlockedApps().length);
-      
+
       const tasks = storage.getTasks();
       setTotalTasks(tasks.length);
       setCompletedTasks(tasks.filter(t => t.completed).length);
-      
+
       setSessionCount(storage.getFocusSessions().length);
     };
 

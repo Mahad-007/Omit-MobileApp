@@ -260,11 +260,12 @@ class LocalStorageService {
     
     let stats = allStats.find(s => s.date === today);
     if (!stats) {
-      // Mock random "wasted" time for realism if it's a new day, or start at 0
-      // The user wants dynamic data, but we don't track "wasted" reliably yet.
-      // Let's start with 0 saved, and maybe a small random wasted amount for "baseline distractions"
-      stats = { date: today, savedHours: 0, wastedHours: Math.random() * 0.5 }; 
+      stats = { date: today, savedHours: 0, wastedHours: 0 };
       allStats.push(stats);
+      localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
+    } else if (stats.savedHours === 0 && stats.wastedHours > 0 && stats.wastedHours < 0.5) {
+      // Fix old random wasted data (was initialized with Math.random() * 0.5)
+      stats.wastedHours = 0;
       localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
     }
     return stats;
@@ -280,10 +281,10 @@ class LocalStorageService {
       allStats[index].savedHours += savedAdd;
       allStats[index].wastedHours += wastedAdd;
     } else {
-      allStats.push({ 
-        date: today, 
-        savedHours: savedAdd, 
-        wastedHours: wastedAdd + (Math.random() * 0.5) 
+      allStats.push({
+        date: today,
+        savedHours: savedAdd,
+        wastedHours: wastedAdd
       });
     }
     localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
@@ -345,10 +346,25 @@ class LocalStorageService {
       return {
           saved: today.savedHours,
           wasted: today.wastedHours,
-          efficiency: today.savedHours + today.wastedHours > 0 
-            ? Math.round((today.savedHours / (today.savedHours + today.wastedHours)) * 100) 
+          efficiency: today.savedHours + today.wastedHours > 0
+            ? Math.round((today.savedHours / (today.savedHours + today.wastedHours)) * 100)
             : 0
       };
+  }
+
+  // Reset today's stats to zero
+  resetTodayStats() {
+      const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+      const allStats: DailyStats[] = data ? JSON.parse(data) : [];
+      const today = new Date().toISOString().split('T')[0];
+
+      const index = allStats.findIndex(s => s.date === today);
+      if (index >= 0) {
+          allStats[index] = { date: today, savedHours: 0, wastedHours: 0 };
+      } else {
+          allStats.push({ date: today, savedHours: 0, wastedHours: 0 });
+      }
+      localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
   }
 }
 

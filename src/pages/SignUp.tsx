@@ -150,6 +150,16 @@ export default function SignUp() {
             </Link>
           </div>
         </div>
+
+        <div className="text-center text-sm text-muted-foreground">
+          <Link to="/privacy" className="hover:text-primary hover:underline">
+            Privacy Policy
+          </Link>
+          <span className="mx-2">·</span>
+          <Link to="/terms" className="hover:text-primary hover:underline">
+            Terms of Service
+          </Link>
+        </div>
       </div>
     </div>
   );
