@@ -241,40 +241,6 @@ export default function SocialBlocker() {
         <p className="text-muted-foreground">Block distractions and stay focused</p>
       </div>
 
-      {/* Extension Installation Notice */}
-      <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-              Install Browser Extension to Block Websites
-            </h3>
-            <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
-              To actually block websites like Instagram, you need to install the Omit browser extension. 
-              The extension will sync with your blocked sites list and prevent access to distracting websites.
-            </p>
-            <div className="space-y-2 text-sm">
-              <p className="font-medium text-blue-900 dark:text-blue-100">Installation Steps:</p>
-              <ol className="list-decimal list-inside space-y-1 text-blue-800 dark:text-blue-200 ml-2">
-                <li>Open Chrome/Edge and go to <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">chrome://extensions/</code></li>
-                <li>Enable "Developer mode" (toggle in top right)</li>
-                <li>Click "Load unpacked"</li>
-                <li>Select the <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">extension</code> folder from this project</li>
-                <li>Click the extension icon and click "Sync with App"</li>
-              </ol>
-            </div>
-            <Button
-              onClick={handleManualSync}
-              variant="outline"
-              size="sm"
-              className="mt-3 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900"
-            >
-              Sync with Extension
-            </Button>
-          </div>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <DashboardCard title="Your Blocked Apps" icon={Shield}>
