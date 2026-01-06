@@ -72,6 +72,11 @@ export default function SignUp() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
+          <img 
+            src="/omit-logo.png" 
+            alt="Omit Logo" 
+            className="w-16 h-16 mx-auto mb-4 object-contain"
+          />
           <h1 className="text-3xl font-bold tracking-tight">Create an account</h1>
           <p className="mt-2 text-muted-foreground">Enter your details to get started</p>
         </div>

@@ -14,9 +14,11 @@ export function Sidebar() {
     <aside className="w-64 bg-card border-r border-border flex flex-col">
       <div className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <img 
+            src="/omit-logo.png" 
+            alt="Omit Logo" 
+            className="w-10 h-10 object-contain"
+          />
           <div>
             <h1 className="text-xl font-bold text-foreground">Omit</h1>
             <p className="text-xs text-muted-foreground">Stay productive</p>
