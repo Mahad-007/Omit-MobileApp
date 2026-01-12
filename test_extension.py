@@ -237,6 +237,59 @@ class ExtensionTester:
         except Exception as e:
             self.log("Site Blocking", False, str(e)); return False
 
+    def test_site_unblocking(self):
+        print("-" * 40 + "\nTEST: Site Unblocking")
+        if not self.ext_id:
+            self.log("Site Unblocking", True, "Skipped", skip=True); return True
+            
+        popup_url = f"chrome-extension://{self.ext_id}/popup.html"
+        target_site = "https://example.org"
+        target_domain = "example.org"
+        
+        try:
+            # 1. Block the site first to set up test condition
+            self.driver.get(popup_url); time.sleep(1)
+            self.driver.execute_script(f"""
+                chrome.runtime.sendMessage({{
+                    action: "updateSyncData",
+                    syncData: {{ blockedApps: [{{ url: "{target_domain}", blocked: true, blockMode: "always" }}], focusMode: true }}
+                }});
+            """)
+            time.sleep(2)
+            
+            # 2. Unblock the site
+            self.driver.get(popup_url); time.sleep(1)
+            self.driver.execute_script('chrome.runtime.sendMessage({action:"updateSyncData",syncData:{blockedApps:[],focusMode:false}});')
+            time.sleep(2)
+            
+            # 3. Check if accessible
+            self.driver.get(target_site); time.sleep(3)
+            is_blocked = "blocked.html" in self.driver.current_url
+            
+            self.log("Site Unblocking", not is_blocked, "Site successfully unblocked" if not is_blocked else "Failed: Site remained blocked")
+            return not is_blocked
+            
+        except Exception as e:
+            self.log("Site Unblocking", False, str(e)); return False
+
+    def test_invalid_login(self):
+        print("-" * 40 + "\nTEST: Invalid Login")
+        if not self.email:
+             self.log("Invalid Login", True, "Skipped", skip=True); return True
+        try:
+            self.driver.get(f"{self.base_url}/login"); time.sleep(2)
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='email']")))
+            self.driver.find_element(By.CSS_SELECTOR, "input[type='email']").send_keys(self.email)
+            self.driver.find_element(By.CSS_SELECTOR, "input[type='password']").send_keys("wrongpassword")
+            self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+            time.sleep(3)
+            
+            still_on_login = "/login" in self.driver.current_url
+            self.log("Invalid Login", still_on_login, "Correctly prevented login" if still_on_login else "Failed: Logged in with wrong password")
+            return still_on_login
+        except Exception as e:
+            self.log("Invalid Login", False, str(e)); return False
+
     def test_webapp_connection(self):
         print("-"*40 + "\nTEST: Web App Connection")
         try:
@@ -264,13 +317,15 @@ class ExtensionTester:
             for t in tests: t(); time.sleep(0.5)
             
             if self.find_extension_id():
-                for t in [self.test_popup_ui, self.test_blocked_page_ui, self.test_site_blocking]:
+                for t in [self.test_popup_ui, self.test_blocked_page_ui, self.test_site_blocking, self.test_site_unblocking]:
                     t(); time.sleep(0.5)
             
             self.test_webapp_connection(); time.sleep(0.5)
             
-            if self.email and self.password and self.login():
-                self.test_blocker_page()
+            if self.email and self.password:
+                self.test_invalid_login(); time.sleep(0.5)
+                if self.login():
+                    self.test_blocker_page()
             
             # Summary
             passed = sum(1 for _, p, s, _ in self.results if p and not s)

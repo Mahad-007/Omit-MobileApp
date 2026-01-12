@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -28,6 +28,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { signIn, user, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -47,15 +48,33 @@ export default function Login() {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      const { error } = await signIn(data.email, data.password);
+      // Trim inputs to avoid accidental whitespace
+      const email = data.email.trim();
+      const password = data.password.trim();
+
+      const { error } = await signIn(email, password);
+      
       if (error) {
-        toast.error(error.message || 'Failed to sign in');
+        console.error('Login error:', error);
+        
+        let errorMessage = 'Failed to sign in';
+        if (error.message === 'Invalid login credentials') {
+          errorMessage = 'Incorrect email or password. Please try again.';
+        } else {
+          errorMessage = error.message;
+        }
+        
+        toast.error(errorMessage);
+        // Clear password field to allow retry
+        form.setValue('password', ''); 
       } else {
         toast.success('Welcome back!');
         navigate('/');
       }
     } catch (error) {
-      toast.error('An unexpected error occurred');
+      console.error('Unexpected login error:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+      form.setValue('password', '');
     } finally {
       setIsLoading(false);
     }
@@ -103,12 +122,30 @@ export default function Login() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          disabled={isLoading}
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span className="sr-only">
+                            {showPassword ? 'Hide password' : 'Show password'}
+                          </span>
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
