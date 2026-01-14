@@ -6,6 +6,7 @@
 // const SUPABASE_ANON_KEY = '...';
 
 let blockedDomains = new Set();
+let distractingDomains = new Set(); // ALL sites in block list (for wasted time tracking, regardless of block mode)
 let focusModeActive = false;
 let userId = null;
 let accessToken = null;
@@ -39,6 +40,7 @@ async function loadBlockedSites() {
       "userId",
       "accessToken",
       "blockedSites",
+      "distractingSites",
       "focusMode",
       "tasks",
     ]);
@@ -50,6 +52,10 @@ async function loadBlockedSites() {
       blockedDomains = new Set(result.blockedSites);
       await updateBlockingRules();
       await checkAndUnblockTabs();
+    }
+    
+    if (result.distractingSites) {
+      distractingDomains = new Set(result.distractingSites);
     }
   } catch (error) {
     console.error("Error loading data:", error);
@@ -88,11 +94,17 @@ async function syncFromPayload(data) {
   // Process blocked apps if provided
   if (data.blockedApps && Array.isArray(data.blockedApps)) {
     blockedDomains.clear();
+    distractingDomains.clear(); // Clear and rebuild the distracting sites list
 
     data.blockedApps.forEach((app) => {
       const domain = extractDomain(app.url);
       if (domain) {
-        // Check blocking rules
+        // Add ALL blocked apps to distracting domains (for wasted time tracking)
+        if (app.blocked) {
+          distractingDomains.add(domain);
+        }
+        
+        // Only add to blockedDomains if actively blocked right now
         if (app.blocked && (app.blockMode === "always" || focusModeActive)) {
           blockedDomains.add(domain);
         }
@@ -102,9 +114,10 @@ async function syncFromPayload(data) {
     // Cache domains
     await chrome.storage.local.set({
       blockedSites: Array.from(blockedDomains),
+      distractingSites: Array.from(distractingDomains), // Also cache distracting sites
     });
     console.log(
-      `[FocusSphere] Updated ${blockedDomains.size} blocked domains from payload.`
+      `[FocusSphere] Updated ${blockedDomains.size} blocked domains, ${distractingDomains.size} distracting domains from payload.`
     );
 
     // Update rules
@@ -279,15 +292,16 @@ async function trackTime() {
     if (!currentUrl) return;
 
     const domain = extractDomain(currentUrl);
-    const isBlocked = domain && blockedDomains.has(domain);
+    // Use distractingDomains (all sites in block list) for wasted time tracking
+    // This includes sites set to "focus mode only" even when focus mode is off
+    const isDistractingSite = domain && distractingDomains.has(domain);
     const isBlockedPage = currentUrl.includes(chrome.runtime.getURL("blocked.html"));
 
     // Time tracking logic:
     // 1. If user is on blocked.html page -> WASTED TIME (they're viewing the block page)
-    // 2. If Focus Mode is ACTIVE and user is on a blocked site -> WASTED TIME
-    // 3. If Focus Mode is ACTIVE and user is NOT on a blocked site -> SAVED TIME
-    // 4. If Focus Mode is INACTIVE and site is NOT blocked -> SAVED TIME
-    // 5. If Focus Mode is INACTIVE and site IS blocked -> WASTED TIME
+    // 2. If user is on ANY distracting site (in block list) -> WASTED TIME
+    //    This includes "focus mode only" sites even when focus mode is off!
+    // 3. All other cases -> SAVED TIME (productive browsing)
 
     let isWastingTime = false;
     
@@ -296,16 +310,11 @@ async function trackTime() {
       pendingWastedHours += 1 / 60;
       isWastingTime = true;
       console.log("[FocusSphere] Tracking wasted time (on blocked page)");
-    } else if (focusModeActive && isBlocked) {
-      // Focus mode active but somehow on blocked site - wasted time
+    } else if (isDistractingSite) {
+      // User is on a distracting site (any site in the block list) - wasted time
       pendingWastedHours += 1 / 60;
       isWastingTime = true;
-      console.log("[FocusSphere] Tracking wasted time (focus mode + blocked site)");
-    } else if (!focusModeActive && isBlocked) {
-      // Focus mode inactive but on blocked site - wasted time
-      pendingWastedHours += 1 / 60;
-      isWastingTime = true;
-      console.log("[FocusSphere] Tracking wasted time (on blocked site without focus mode)");
+      console.log(`[FocusSphere] Tracking wasted time (on distracting site: ${domain})`);
     } else {
       // All other cases - productive time (saved)
       pendingSavedHours += 1 / 60;
