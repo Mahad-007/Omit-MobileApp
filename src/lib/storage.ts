@@ -45,7 +45,22 @@ const STORAGE_KEYS = {
   SETTINGS: 'focussphere_settings',
 };
 
+// Event system for real-time updates
+type StatsListener = () => void;
+
 class LocalStorageService {
+  private statsListeners: Set<StatsListener> = new Set();
+
+  // Subscribe to stats changes (for real-time Dashboard updates)
+  onStatsChange(listener: StatsListener): () => void {
+    this.statsListeners.add(listener);
+    return () => this.statsListeners.delete(listener);
+  }
+
+  // Notify all listeners of stats changes
+  private notifyStatsChange() {
+    this.statsListeners.forEach(listener => listener());
+  }
   // Helper to keep extension synced whenever data changes
   public forceSync() {
     try {
@@ -288,6 +303,7 @@ class LocalStorageService {
       });
     }
     localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
+    this.notifyStatsChange(); // Notify listeners for real-time updates
   }
   
   // Real-time accumulation from Extension

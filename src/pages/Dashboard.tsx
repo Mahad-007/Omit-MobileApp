@@ -32,9 +32,20 @@ export default function Dashboard() {
 
     loadData();
 
-    // Optional: Refresh every minute just in case
+    // Subscribe to real-time stats updates from the extension
+    const unsubscribe = storage.onStatsChange(() => {
+      // Update stats immediately when extension reports time changes
+      setStats(storage.getTotalStats());
+      setProductivityData(storage.getProductivityData());
+    });
+
+    // Also refresh every minute as a fallback
     const interval = setInterval(loadData, 60000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   return (
