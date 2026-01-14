@@ -17,6 +17,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { AndroidAppBlocker } from "@/components/AndroidAppBlocker";
+import { isCapacitor } from "@/lib/app-blocker";
 
 export default function SocialBlocker() {
   const { user } = useAuth(); // Keep auth for user context if needed, though storage is now local
@@ -234,14 +236,30 @@ export default function SocialBlocker() {
       toast.success('Sync signal sent to extension.');
   };
 
+  // On Android (Capacitor), only show the Android App Blocker
+  // Website blocking uses browser extension which isn't available on Android
+  if (isCapacitor()) {
+    return (
+      <div className="space-y-4 lg:space-y-6 animate-fade-in">
+        <div>
+          <h2 className="text-xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">App Blocker</h2>
+          <p className="text-sm lg:text-base text-muted-foreground">Block distracting apps and stay focused</p>
+        </div>
+        
+        {/* Android App Blocking Section */}
+        <AndroidAppBlocker />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 lg:space-y-6 animate-fade-in">
       <div>
-        <h2 className="text-3xl font-bold text-foreground mb-2">Social Media Blocker</h2>
-        <p className="text-muted-foreground">Block distractions and stay focused</p>
+        <h2 className="text-xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">Social Media Blocker</h2>
+        <p className="text-sm lg:text-base text-muted-foreground">Block distractions and stay focused</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="lg:col-span-2">
           <DashboardCard title="Your Blocked Apps" icon={Shield}>
             <div className="space-y-4">

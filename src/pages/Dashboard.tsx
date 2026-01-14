@@ -49,38 +49,38 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-foreground mb-2">Dashboard Overview</h2>
-        <p className="text-muted-foreground">Track your productivity and stay motivated</p>
+        <h2 className="text-xl lg:text-3xl font-bold text-foreground mb-1 lg:mb-2">Dashboard Overview</h2>
+        <p className="text-sm lg:text-base text-muted-foreground">Track your productivity and stay motivated</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Focus Time Section - Left Half */}
         <Card className="lg:row-span-2 shadow-elevated bg-gradient-to-br from-card to-accent/20 border-primary/10">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-3 text-2xl">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Clock className="h-6 w-6 text-primary" />
+          <CardHeader className="pb-2 lg:pb-4">
+            <CardTitle className="flex items-center gap-2 lg:gap-3 text-lg lg:text-2xl">
+              <div className="p-1.5 lg:p-2 rounded-lg bg-primary/10">
+                <Clock className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
               </div>
               <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 Focus Time Tracker
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-6 text-center">
-              <div className="space-y-3 p-6 rounded-xl bg-gradient-accent border border-success/20 shadow-soft">
-                <div className="text-6xl font-bold text-success drop-shadow-sm">{stats.saved.toFixed(1)}h</div>
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Time Saved</p>
+          <CardContent className="space-y-4 lg:space-y-6">
+            <div className="grid grid-cols-2 lg:block lg:space-y-6 gap-3 lg:gap-0 text-center">
+              <div className="space-y-2 lg:space-y-3 p-4 lg:p-6 rounded-xl bg-gradient-accent border border-success/20 shadow-soft">
+                <div className="text-3xl lg:text-6xl font-bold text-success drop-shadow-sm">{stats.saved.toFixed(1)}h</div>
+                <p className="text-xs lg:text-sm font-medium text-muted-foreground uppercase tracking-wide">Time Saved</p>
               </div>
-              <div className="space-y-3 opacity-60 p-4 rounded-xl bg-card/50 border border-border/50">
-                <div className="text-3xl font-semibold text-destructive">{stats.wasted.toFixed(1)}h</div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Time Wasted</p>
+              <div className="space-y-2 lg:space-y-3 opacity-60 p-4 rounded-xl bg-card/50 border border-border/50">
+                <div className="text-2xl lg:text-3xl font-semibold text-destructive">{stats.wasted.toFixed(1)}h</div>
+                <p className="text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wide">Time Wasted</p>
               </div>
             </div>
 
-            <div className="h-[300px]">
+            <div className="h-[200px] lg:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -119,21 +119,21 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 pt-6 mt-2 border-t border-border/50">
-              <div className="text-center p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
-                <div className="text-2xl font-bold text-primary">{stats.efficiency}%</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Efficiency</div>
+            <div className="grid grid-cols-3 gap-2 lg:gap-4 pt-4 lg:pt-6 mt-2 border-t border-border/50">
+              <div className="text-center p-2 lg:p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
+                <div className="text-lg lg:text-2xl font-bold text-primary">{stats.efficiency}%</div>
+                <div className="text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wide mt-1">Efficiency</div>
               </div>
-              <div className="text-center p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
-                <div className="text-2xl font-bold text-foreground">{sessionCount}</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Sessions</div>
+              <div className="text-center p-2 lg:p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
+                <div className="text-lg lg:text-2xl font-bold text-foreground">{sessionCount}</div>
+                <div className="text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wide mt-1">Sessions</div>
               </div>
               {/* Calculating average session time if sessions exist */}
-              <div className="text-center p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
-                <div className="text-2xl font-bold text-foreground">
+              <div className="text-center p-2 lg:p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
+                <div className="text-lg lg:text-2xl font-bold text-foreground">
                   {sessionCount > 0 ? (stats.saved / sessionCount * 60).toFixed(0) : 0}m
                 </div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Avg Session</div>
+                <div className="text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wide mt-1">Avg Session</div>
               </div>
             </div>
           </CardContent>

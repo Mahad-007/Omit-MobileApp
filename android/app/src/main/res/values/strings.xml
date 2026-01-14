@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Omit</string>
+    <string name="title_activity_main">Omit</string>
+    <string name="package_name">com.omit.app</string>
+    <string name="custom_url_scheme">com.omit.app</string>
+    <string name="accessibility_service_description">Omit uses accessibility to detect when you open blocked apps and show a reminder to stay focused. This helps you avoid distractions and maintain productivity.</string>
+</resources>
+

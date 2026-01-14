@@ -140,24 +140,34 @@ export function Header() {
   };
 
   return (
-    <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3 bg-gradient-card px-4 py-2 rounded-lg">
-          <Clock className="w-5 h-5 text-primary" />
+    <header className="min-h-14 lg:h-16 bg-card border-b border-border flex flex-col lg:flex-row items-center justify-between px-3 lg:px-6 py-2 lg:py-0 gap-2 lg:gap-0">
+      <div className="flex items-center gap-2 lg:gap-4 w-full lg:w-auto justify-between lg:justify-start">
+        {/* Logo on mobile */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <img 
+            src="/omit-logo.png" 
+            alt="Omit Logo" 
+            className="w-8 h-8 object-contain"
+          />
+          <span className="font-bold text-foreground">Omit</span>
+        </div>
+        
+        <div className="flex items-center gap-2 lg:gap-3 bg-gradient-card px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg">
+          <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-primary" />
           <div>
-            <p className="text-xs text-muted-foreground">Focus Time</p>
-            <p className="text-lg font-bold text-foreground">{formatTime(focusTime)}</p>
+            <p className="text-[10px] lg:text-xs text-muted-foreground">Focus Time</p>
+            <p className="text-sm lg:text-lg font-bold text-foreground">{formatTime(focusTime)}</p>
           </div>
           <button
             onClick={toggleTimer}
-            className="ml-2 px-3 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            className="ml-1 lg:ml-2 px-2 lg:px-3 py-1 text-[10px] lg:text-xs font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
             {isActive ? "Pause" : "Start"}
           </button>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="hidden lg:flex items-center gap-4">
         <div className="text-right">
           <p className="text-sm font-medium text-foreground">Welcome back, {getUserDisplayName()}!</p>
           <p className="text-xs text-muted-foreground">Let's stay focused today</p>
