@@ -235,6 +235,8 @@ async function checkAndBlockTabs() {
 // Time Tracking Logic
 let pendingSavedHours = 0;
 let pendingWastedHours = 0;
+let sessionWastedMinutes = 0; // Track total wasted minutes in current session for notifications
+let lastNotificationThreshold = 0; // Track which threshold we last notified at (10, 20, 30, etc.)
 const TIME_TRACKING_ALARM = "trackTime";
 
 chrome.alarms.create(TIME_TRACKING_ALARM, { periodInMinutes: 1 });
@@ -268,22 +270,48 @@ async function trackTime() {
     // 4. If Focus Mode is INACTIVE and site is NOT blocked -> SAVED TIME
     // 5. If Focus Mode is INACTIVE and site IS blocked -> WASTED TIME
 
+    let isWastingTime = false;
+    
     if (isBlockedPage) {
       // User is viewing the blocked page - this is wasted time
       pendingWastedHours += 1 / 60;
+      isWastingTime = true;
       console.log("[FocusSphere] Tracking wasted time (on blocked page)");
     } else if (focusModeActive && isBlocked) {
       // Focus mode active but somehow on blocked site - wasted time
       pendingWastedHours += 1 / 60;
+      isWastingTime = true;
       console.log("[FocusSphere] Tracking wasted time (focus mode + blocked site)");
     } else if (!focusModeActive && isBlocked) {
       // Focus mode inactive but on blocked site - wasted time
       pendingWastedHours += 1 / 60;
+      isWastingTime = true;
       console.log("[FocusSphere] Tracking wasted time (on blocked site without focus mode)");
     } else {
       // All other cases - productive time (saved)
       pendingSavedHours += 1 / 60;
       console.log("[FocusSphere] Tracking saved time");
+    }
+
+    // Track wasted time for notifications (every 10 minutes)
+    if (isWastingTime) {
+      sessionWastedMinutes += 1;
+      
+      // Check if we've crossed a new 10-minute threshold
+      const currentThreshold = Math.floor(sessionWastedMinutes / 10) * 10;
+      if (currentThreshold > 0 && currentThreshold > lastNotificationThreshold) {
+        lastNotificationThreshold = currentThreshold;
+        
+        // Show notification
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icon-128.png',
+          title: 'Time Wasted ⏰',
+          message: `You've wasted ${sessionWastedMinutes} minutes on blocked sites today. Time to refocus!`,
+          priority: 2
+        });
+        console.log(`[FocusSphere] Wasted time notification: ${sessionWastedMinutes} minutes`);
+      }
     }
 
     // Try to push to web app immediately
