@@ -110,3 +110,32 @@ window.addEventListener('message', (event) => {
   }
 });
 
+// On content script load, request any pending time from background script
+// This ensures time accumulated while app was closed gets synced
+setTimeout(() => {
+  chrome.runtime.sendMessage({ action: 'getPendingTime' }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.log('[ContentScript] Could not get pending time:', chrome.runtime.lastError);
+      return;
+    }
+    
+    if (response && (response.savedHours > 0 || response.wastedHours > 0)) {
+      console.log('[ContentScript] Received pending time:', response);
+      
+      if (response.savedHours > 0) {
+        window.postMessage({
+          type: 'OMIT_ADD_TIME',
+          payload: { hours: response.savedHours }
+        }, '*');
+      }
+      
+      if (response.wastedHours > 0) {
+        window.postMessage({
+          type: 'OMIT_ADD_WASTED_TIME',
+          payload: { hours: response.wastedHours }
+        }, '*');
+      }
+    }
+  });
+}, 1000); // Small delay to ensure web app is ready
+

@@ -239,6 +239,25 @@ let sessionWastedMinutes = 0; // Track total wasted minutes in current session f
 let lastNotificationThreshold = 0; // Track which threshold we last notified at (10, 20, 30, etc.)
 const TIME_TRACKING_ALARM = "trackTime";
 
+// Load pending time from storage on startup
+chrome.storage.local.get(['pendingSavedHours', 'pendingWastedHours', 'sessionWastedMinutes', 'lastNotificationThreshold'], (result) => {
+  if (result.pendingSavedHours) pendingSavedHours = result.pendingSavedHours;
+  if (result.pendingWastedHours) pendingWastedHours = result.pendingWastedHours;
+  if (result.sessionWastedMinutes) sessionWastedMinutes = result.sessionWastedMinutes;
+  if (result.lastNotificationThreshold) lastNotificationThreshold = result.lastNotificationThreshold;
+  console.log(`[FocusSphere] Loaded pending time: saved=${pendingSavedHours.toFixed(4)}h, wasted=${pendingWastedHours.toFixed(4)}h`);
+});
+
+// Save pending time to storage periodically
+async function savePendingTime() {
+  await chrome.storage.local.set({
+    pendingSavedHours,
+    pendingWastedHours,
+    sessionWastedMinutes,
+    lastNotificationThreshold
+  });
+}
+
 chrome.alarms.create(TIME_TRACKING_ALARM, { periodInMinutes: 1 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -314,6 +333,9 @@ async function trackTime() {
       }
     }
 
+    // Save pending time to storage (in case sync fails or app not open)
+    await savePendingTime();
+
     // Try to push to web app immediately
     await syncToWebApp();
   } catch (e) {
@@ -381,6 +403,11 @@ async function syncToWebApp() {
       );
       pendingWastedHours = 0;
     }
+    
+    // Save zeroed values to storage after successful sync
+    if (syncedSaved || syncedWasted) {
+      await savePendingTime();
+    }
   } catch (e) {
     console.error("[FocusSphere] Error syncing time to web app:", e);
   }
@@ -432,6 +459,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         focusMode: focusModeActive,
         userId: userId,
       });
+      return false;
+    }
+
+    // Handle request for pending time from web app
+    if (request.action === "getPendingTime") {
+      sendResponse({
+        savedHours: pendingSavedHours,
+        wastedHours: pendingWastedHours
+      });
+      // Clear pending time after sending
+      pendingSavedHours = 0;
+      pendingWastedHours = 0;
+      savePendingTime(); // Persist the reset
       return false;
     }
 
