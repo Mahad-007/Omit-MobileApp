@@ -87,6 +87,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
       return true;
   }
+  
+  // Relay wasted time to web app
+  if (request.action === 'addWastedTime') {
+      window.postMessage({
+          type: 'OMIT_ADD_WASTED_TIME',
+          payload: { hours: request.hours }
+      }, '*');
+      sendResponse({ success: true });
+      return true;
+  }
 });
 
 // Listen for messages from the web app

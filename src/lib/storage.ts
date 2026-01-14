@@ -296,6 +296,12 @@ class LocalStorageService {
       this.updateDailyStats(hours, 0);
   }
   
+  // Real-time wasted time accumulation from Extension
+  addWastedTime(hours: number) {
+      if (hours <= 0) return;
+      this.updateDailyStats(0, hours);
+  }
+  
   // For the chart
   getProductivityData() {
       // This matches the format expected by the Dashboard chart

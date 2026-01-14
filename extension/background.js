@@ -234,6 +234,7 @@ async function checkAndBlockTabs() {
 
 // Time Tracking Logic
 let pendingSavedHours = 0;
+let pendingWastedHours = 0;
 const TIME_TRACKING_ALARM = "trackTime";
 
 chrome.alarms.create(TIME_TRACKING_ALARM, { periodInMinutes: 1 });
@@ -244,11 +245,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       // Silently ignore - app may not be open
     });
   } else if (alarm.name === TIME_TRACKING_ALARM) {
-    await trackTimeSaved();
+    await trackTime();
   }
 });
 
-async function trackTimeSaved() {
+async function trackTime() {
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs.length === 0) return;
@@ -258,31 +259,47 @@ async function trackTimeSaved() {
 
     const domain = extractDomain(currentUrl);
     const isBlocked = domain && blockedDomains.has(domain);
+    const isBlockedPage = currentUrl.includes(chrome.runtime.getURL("blocked.html"));
 
-    // Save time if:
-    // 1. Focus Mode is ACTIVE (regardless of site)
-    // 2. Focus Mode is INACTIVE AND site is NOT blocked
-    // Note: If site is blocked and Focus Mode is active, user can't be there anyway (redirected).
-    // If site is blocked and Focus Mode is inactive, user IS wasting time there -> No saved time.
+    // Time tracking logic:
+    // 1. If user is on blocked.html page -> WASTED TIME (they're viewing the block page)
+    // 2. If Focus Mode is ACTIVE and user is on a blocked site -> WASTED TIME
+    // 3. If Focus Mode is ACTIVE and user is NOT on a blocked site -> SAVED TIME
+    // 4. If Focus Mode is INACTIVE and site is NOT blocked -> SAVED TIME
+    // 5. If Focus Mode is INACTIVE and site IS blocked -> WASTED TIME
 
-    if (focusModeActive || (!focusModeActive && !isBlocked)) {
-      // Add 1 minute (in hours)
+    if (isBlockedPage) {
+      // User is viewing the blocked page - this is wasted time
+      pendingWastedHours += 1 / 60;
+      console.log("[FocusSphere] Tracking wasted time (on blocked page)");
+    } else if (focusModeActive && isBlocked) {
+      // Focus mode active but somehow on blocked site - wasted time
+      pendingWastedHours += 1 / 60;
+      console.log("[FocusSphere] Tracking wasted time (focus mode + blocked site)");
+    } else if (!focusModeActive && isBlocked) {
+      // Focus mode inactive but on blocked site - wasted time
+      pendingWastedHours += 1 / 60;
+      console.log("[FocusSphere] Tracking wasted time (on blocked site without focus mode)");
+    } else {
+      // All other cases - productive time (saved)
       pendingSavedHours += 1 / 60;
-
-      // Try to push to web app immediately
-      await syncToWebApp();
+      console.log("[FocusSphere] Tracking saved time");
     }
+
+    // Try to push to web app immediately
+    await syncToWebApp();
   } catch (e) {
     console.error("[FocusSphere] Error tracking time:", e);
   }
 }
 
 async function syncToWebApp() {
-  if (pendingSavedHours <= 0) return;
+  if (pendingSavedHours <= 0 && pendingWastedHours <= 0) return;
 
   try {
     const tabs = await chrome.tabs.query({});
-    let synced = false;
+    let syncedSaved = false;
+    let syncedWasted = false;
 
     // Find tabs managed by the app
     const appOrigins = [
@@ -300,22 +317,41 @@ async function syncToWebApp() {
 
       if (appOrigins.includes(origin)) {
         try {
-          await chrome.tabs.sendMessage(tab.id, {
-            action: "addSavedTime",
-            hours: pendingSavedHours,
-          });
-          synced = true;
+          // Sync saved time
+          if (pendingSavedHours > 0) {
+            await chrome.tabs.sendMessage(tab.id, {
+              action: "addSavedTime",
+              hours: pendingSavedHours,
+            });
+            syncedSaved = true;
+          }
+          
+          // Sync wasted time
+          if (pendingWastedHours > 0) {
+            await chrome.tabs.sendMessage(tab.id, {
+              action: "addWastedTime",
+              hours: pendingWastedHours,
+            });
+            syncedWasted = true;
+          }
         } catch (e) {
           // Tab might not be ready or not the right page, continue
         }
       }
     }
 
-    if (synced) {
+    if (syncedSaved) {
       console.log(
-        `[FocusSphere] Synced ${pendingSavedHours.toFixed(4)} hours to web app`
+        `[FocusSphere] Synced ${pendingSavedHours.toFixed(4)} saved hours to web app`
       );
       pendingSavedHours = 0;
+    }
+    
+    if (syncedWasted) {
+      console.log(
+        `[FocusSphere] Synced ${pendingWastedHours.toFixed(4)} wasted hours to web app`
+      );
+      pendingWastedHours = 0;
     }
   } catch (e) {
     console.error("[FocusSphere] Error syncing time to web app:", e);

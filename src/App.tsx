@@ -37,6 +37,12 @@ const App = () => {
                 console.log('[App] Received saved time update:', event.data.payload.hours);
                 storage.addSavedTime(event.data.payload.hours);
             }
+            
+            // Handle wasted time updates from the extension
+            if (event.data?.type === 'OMIT_ADD_WASTED_TIME' && event.data?.payload?.hours) {
+                console.log('[App] Received wasted time update:', event.data.payload.hours);
+                storage.addWastedTime(event.data.payload.hours);
+            }
         };
 
         window.addEventListener('message', handleTimeUpdate);
