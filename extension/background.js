@@ -270,20 +270,33 @@ function isDomainInSet(domain, domainSet) {
   return false;
 }
 
-// Time Tracking Logic
+// Time Tracking Logic - Tab-based approach
 let pendingSavedHours = 0;
 let pendingWastedHours = 0;
 let sessionWastedMinutes = 0; // Track total wasted minutes in current session for notifications
 let lastNotificationThreshold = 0; // Track which threshold we last notified at (10, 20, 30, etc.)
-const TIME_TRACKING_ALARM = "trackTime";
+
+// Tab-based time tracking state
+let currentTrackingState = {
+  tabId: null,
+  domain: null,
+  startTime: null,
+  isWasting: false
+};
 
 // Load pending time from storage on startup
-chrome.storage.local.get(['pendingSavedHours', 'pendingWastedHours', 'sessionWastedMinutes', 'lastNotificationThreshold'], (result) => {
+chrome.storage.local.get(['pendingSavedHours', 'pendingWastedHours', 'sessionWastedMinutes', 'lastNotificationThreshold', 'currentTrackingState'], (result) => {
   if (result.pendingSavedHours) pendingSavedHours = result.pendingSavedHours;
   if (result.pendingWastedHours) pendingWastedHours = result.pendingWastedHours;
   if (result.sessionWastedMinutes) sessionWastedMinutes = result.sessionWastedMinutes;
   if (result.lastNotificationThreshold) lastNotificationThreshold = result.lastNotificationThreshold;
+  if (result.currentTrackingState) currentTrackingState = result.currentTrackingState;
   console.log(`[FocusSphere] Loaded pending time: saved=${pendingSavedHours.toFixed(4)}h, wasted=${pendingWastedHours.toFixed(4)}h`);
+  
+  // Resume tracking if we were on a distracting site when extension reloaded
+  if (currentTrackingState.startTime && currentTrackingState.isWasting) {
+    console.log(`[FocusSphere] Resuming tracking from previous session`);
+  }
 });
 
 // Save pending time to storage periodically
@@ -292,10 +305,173 @@ async function savePendingTime() {
     pendingSavedHours,
     pendingWastedHours,
     sessionWastedMinutes,
-    lastNotificationThreshold
+    lastNotificationThreshold,
+    currentTrackingState
   });
 }
 
+// Check if a URL is a distracting site
+function isDistractingUrl(url) {
+  if (!url) return false;
+  
+  const domain = extractDomain(url);
+  const isDistractingSite = isDomainInSet(domain, distractingDomains);
+  const isBlockedPage = url.includes(chrome.runtime.getURL("blocked.html"));
+  
+  return isDistractingSite || isBlockedPage;
+}
+
+// Start tracking time on a distracting site
+function startWastedTimeTracking(tabId, url) {
+  const domain = extractDomain(url);
+  
+  // If already tracking this tab, don't restart
+  if (currentTrackingState.tabId === tabId && currentTrackingState.isWasting) {
+    return;
+  }
+  
+  // First, finalize any previous tracking
+  finalizeCurrentTracking();
+  
+  currentTrackingState = {
+    tabId: tabId,
+    domain: domain,
+    startTime: Date.now(),
+    isWasting: true
+  };
+  
+  console.log(`[FocusSphere] Started tracking wasted time on: ${domain}`);
+  savePendingTime();
+}
+
+// Start tracking saved time (productive browsing)
+function startSavedTimeTracking(tabId, url) {
+  const domain = extractDomain(url);
+  
+  // If already tracking this tab as productive, don't restart
+  if (currentTrackingState.tabId === tabId && !currentTrackingState.isWasting) {
+    return;
+  }
+  
+  // First, finalize any previous tracking
+  finalizeCurrentTracking();
+  
+  currentTrackingState = {
+    tabId: tabId,
+    domain: domain,
+    startTime: Date.now(),
+    isWasting: false
+  };
+  
+  console.log(`[FocusSphere] Started tracking saved time on: ${domain}`);
+  savePendingTime();
+}
+
+// Finalize current tracking and add time to pending totals
+function finalizeCurrentTracking() {
+  if (!currentTrackingState.startTime) return;
+  
+  const elapsedMs = Date.now() - currentTrackingState.startTime;
+  const elapsedHours = elapsedMs / (1000 * 60 * 60);
+  const elapsedMinutes = elapsedMs / (1000 * 60);
+  
+  // Only count if at least 1 second has passed
+  if (elapsedMs < 1000) return;
+  
+  if (currentTrackingState.isWasting) {
+    pendingWastedHours += elapsedHours;
+    sessionWastedMinutes += elapsedMinutes;
+    console.log(`[FocusSphere] Added ${(elapsedMinutes).toFixed(2)} minutes of wasted time (${currentTrackingState.domain}). Total pending: ${pendingWastedHours.toFixed(4)}h`);
+    
+    // Check notification threshold
+    const currentThreshold = Math.floor(sessionWastedMinutes / 10) * 10;
+    if (currentThreshold > 0 && currentThreshold > lastNotificationThreshold) {
+      lastNotificationThreshold = currentThreshold;
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon-128.png',
+        title: 'Time Wasted ⏰',
+        message: `You've wasted ${Math.round(sessionWastedMinutes)} minutes on blocked sites today. Time to refocus!`,
+        priority: 2
+      });
+    }
+  } else {
+    pendingSavedHours += elapsedHours;
+    console.log(`[FocusSphere] Added ${(elapsedMinutes).toFixed(2)} minutes of saved time (${currentTrackingState.domain}). Total pending: ${pendingSavedHours.toFixed(4)}h`);
+  }
+  
+  // Reset tracking state
+  currentTrackingState = {
+    tabId: null,
+    domain: null,
+    startTime: null,
+    isWasting: false
+  };
+  
+  savePendingTime();
+  
+  // Try to sync to web app immediately
+  syncToWebApp();
+}
+
+// Handle tab activation (user switches tabs)
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    handleTabChange(tab.id, tab.url);
+  } catch (e) {
+    console.log('[FocusSphere] Error getting activated tab:', e);
+  }
+});
+
+// Handle tab URL changes (navigation within tab)
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // Only track when the page has finished loading
+  if (changeInfo.status === 'complete' && tab.active) {
+    handleTabChange(tabId, tab.url);
+  }
+});
+
+// Handle window focus changes
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    // User left Chrome, finalize tracking
+    finalizeCurrentTracking();
+  } else {
+    // User returned to Chrome, check active tab
+    try {
+      const tabs = await chrome.tabs.query({ active: true, windowId: windowId });
+      if (tabs.length > 0) {
+        handleTabChange(tabs[0].id, tabs[0].url);
+      }
+    } catch (e) {
+      console.log('[FocusSphere] Error handling window focus:', e);
+    }
+  }
+});
+
+// Central handler for tab changes
+function handleTabChange(tabId, url) {
+  if (!url) {
+    finalizeCurrentTracking();
+    return;
+  }
+  
+  // Skip chrome:// and other internal pages
+  if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') && !url.includes('blocked.html')) {
+    finalizeCurrentTracking();
+    return;
+  }
+  
+  if (isDistractingUrl(url)) {
+    startWastedTimeTracking(tabId, url);
+  } else {
+    startSavedTimeTracking(tabId, url);
+  }
+}
+
+// Keep a periodic sync as backup (every 1 minute)
+const TIME_TRACKING_ALARM = "trackTime";
 chrome.alarms.create(TIME_TRACKING_ALARM, { periodInMinutes: 1 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -304,79 +480,31 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       // Silently ignore - app may not be open
     });
   } else if (alarm.name === TIME_TRACKING_ALARM) {
-    await trackTime();
-  }
-});
-
-async function trackTime() {
-  try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tabs.length === 0) return;
-
-    const currentUrl = tabs[0].url;
-    if (!currentUrl) return;
-
-    const domain = extractDomain(currentUrl);
-    // Use distractingDomains (all sites in block list) for wasted time tracking
-    // This includes sites set to "focus mode only" even when focus mode is off
-    // Use isDomainInSet for subdomain matching (e.g., m.youtube.com matches youtube.com)
-    const isDistractingSite = isDomainInSet(domain, distractingDomains);
-    const isBlockedPage = currentUrl.includes(chrome.runtime.getURL("blocked.html"));
-
-    // Time tracking logic:
-    // 1. If user is on blocked.html page -> WASTED TIME (they're viewing the block page)
-    // 2. If user is on ANY distracting site (in block list) -> WASTED TIME
-    //    This includes "focus mode only" sites even when focus mode is off!
-    // 3. All other cases -> SAVED TIME (productive browsing)
-
-    let isWastingTime = false;
-    
-    if (isBlockedPage) {
-      // User is viewing the blocked page - this is wasted time
-      pendingWastedHours += 1 / 60;
-      isWastingTime = true;
-      console.log("[FocusSphere] Tracking wasted time (on blocked page)");
-    } else if (isDistractingSite) {
-      // User is on a distracting site (any site in the block list) - wasted time
-      pendingWastedHours += 1 / 60;
-      isWastingTime = true;
-      console.log(`[FocusSphere] Tracking wasted time (on distracting site: ${domain}). Distracting domains: ${Array.from(distractingDomains).join(', ')}`);
-    } else {
-      // All other cases - productive time (saved)
-      pendingSavedHours += 1 / 60;
-      console.log(`[FocusSphere] Tracking saved time. Current domain: ${domain}. Distracting domains (${distractingDomains.size}): ${Array.from(distractingDomains).join(', ')}`);
-    }
-
-    // Track wasted time for notifications (every 10 minutes)
-    if (isWastingTime) {
-      sessionWastedMinutes += 1;
+    // Periodic sync - finalize current tracking and sync
+    if (currentTrackingState.startTime) {
+      // Calculate time so far without resetting the start time
+      const elapsedMs = Date.now() - currentTrackingState.startTime;
+      const elapsedHours = elapsedMs / (1000 * 60 * 60);
+      const elapsedMinutes = elapsedMs / (1000 * 60);
       
-      // Check if we've crossed a new 10-minute threshold
-      const currentThreshold = Math.floor(sessionWastedMinutes / 10) * 10;
-      if (currentThreshold > 0 && currentThreshold > lastNotificationThreshold) {
-        lastNotificationThreshold = currentThreshold;
+      if (elapsedMs >= 1000) {
+        if (currentTrackingState.isWasting) {
+          pendingWastedHours += elapsedHours;
+          sessionWastedMinutes += elapsedMinutes;
+          console.log(`[FocusSphere] Periodic sync: added ${elapsedMinutes.toFixed(2)} min wasted time`);
+        } else {
+          pendingSavedHours += elapsedHours;
+          console.log(`[FocusSphere] Periodic sync: added ${elapsedMinutes.toFixed(2)} min saved time`);
+        }
         
-        // Show notification
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: 'icon-128.png',
-          title: 'Time Wasted ⏰',
-          message: `You've wasted ${sessionWastedMinutes} minutes on blocked sites today. Time to refocus!`,
-          priority: 2
-        });
-        console.log(`[FocusSphere] Wasted time notification: ${sessionWastedMinutes} minutes`);
+        // Reset start time to now (so we don't double-count)
+        currentTrackingState.startTime = Date.now();
+        await savePendingTime();
+        await syncToWebApp();
       }
     }
-
-    // Save pending time to storage (in case sync fails or app not open)
-    await savePendingTime();
-
-    // Try to push to web app immediately
-    await syncToWebApp();
-  } catch (e) {
-    console.error("[FocusSphere] Error tracking time:", e);
   }
-}
+});
 
 async function syncToWebApp() {
   if (pendingSavedHours <= 0 && pendingWastedHours <= 0) return;
