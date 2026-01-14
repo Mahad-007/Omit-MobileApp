@@ -387,13 +387,16 @@ function finalizeCurrentTracking() {
     const currentThreshold = Math.floor(sessionWastedMinutes / 10) * 10;
     if (currentThreshold > 0 && currentThreshold > lastNotificationThreshold) {
       lastNotificationThreshold = currentThreshold;
-      chrome.notifications.create({
+      // Use a data URL for the icon since no icon file exists
+      const iconDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAF8WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNy4xLWMwMDAgNzkuZWRhMmIzZmFjLCAyMDIxLzExLzE3LTE3OjIzOjE5ICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1sbnM6cGhvdG9zaG9wPSJodHRwOi8vbnMuYWRvYmUuY29tL3Bob3Rvc2hvcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgMjMuMSAoV2luZG93cykiIHhtcDpDcmVhdGVEYXRlPSIyMDIyLTAxLTAxVDEyOjAwOjAwWiIgeG1wOk1vZGlmeURhdGU9IjIwMjItMDEtMDFUMTI6MDA6MDBaIiB4bXA6TWV0YWRhdGFEYXRlPSIyMDIyLTAxLTAxVDEyOjAwOjAwWiIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ4bXAuZGlkOjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCI+IDx4bXBNTTpIaXN0b3J5PiA8cmRmOlNlcT4gPHJkZjpsaSBzdEV2dDphY3Rpb249ImNyZWF0ZWQiIHN0RXZ0Omluc3RhbmNlSUQ9InhtcC5paWQ6MDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwIiBzdEV2dDp3aGVuPSIyMDIyLTAxLTAxVDEyOjAwOjAwWiIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIDIzLjEgKFdpbmRvd3MpIi8+IDwvcmRmOlNlcT4gPC94bXBNTTpIaXN0b3J5PiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgICAgICAgICAgICAyAAAADklEQVR42mJgGAWjYBT8PwAAfwAB/YXnAgAAAABJRU5ErkJggg==';
+      chrome.notifications.create(`wasted-time-${currentThreshold}`, {
         type: 'basic',
-        iconUrl: 'icon-128.png',
+        iconUrl: iconDataUrl,
         title: 'Time Wasted ⏰',
         message: `You've wasted ${Math.round(sessionWastedMinutes)} minutes on blocked sites today. Time to refocus!`,
         priority: 2
       });
+      console.log('[FocusSphere] Created wasted time notification');
     }
   } else {
     pendingSavedHours += elapsedHours;
@@ -807,14 +810,16 @@ chrome.webNavigation.onBeforeNavigate.addListener((details) => {
 
     const domain = extractDomain(details.url);
     if (isDomainInSet(domain, blockedDomains)) {
-        // Prepare notification
-        chrome.notifications.create({
+        // Prepare notification with data URL icon
+        const iconDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGLSURBVFhH7ZY9TsNAEIXXDhJCNByBggNQcQQKjoAERRoKJI5AwRFoKDgCBUegouAINBScgIIjxHm8M45JYuzd2F7+pE+x117P25mdWSchBIP/jJAKpRg2C6lQisO4OQvPIuBHPMqKL5EpJ+F5BE55lBV3IuBJ+AcBPyLgRRT8hYBXUSCfCXkWBfKZEM+iwJsI8CYC3kTAiwjwJgp8EgU+iQJvIsCbCPAmAryJAm8iwJsI8CYCvIkCbyLAmwjwJgJ+RIA3EeBNFPgkCnyKAp9EgU+iwCdR4FMU+BQFPkWBT1HgUxT4FAU+RYFPUeBTFHgTAd5EgDcR4E0EeBMB3kSBN1HgTRR4EwXeRIE3UeBNFHgTBd5EgTdR4E0UeBMF3kSBN1HgTRR4EwXeRIE3UeBdhHoVAbfC30XAtfB3EXAV8l0EdCH8XQRciYAbEeBKBLgSAa5EgCsR4EoEuBIBrkSAKxHgSgS4EgGuRIArEeBKBLgSAf8iwIsI8CICvIgAL6LAiyj4G4F/FQkh/AF9ywR8i4eZuwAAAABJRU5ErkJggg==';
+        chrome.notifications.create(`focus-alert-${Date.now()}`, {
             type: 'basic',
-            iconUrl: 'icon-128.png', // Fallback if no icon
+            iconUrl: iconDataUrl,
             title: 'Focus Alert 🚫',
             message: `You are visiting a blocked site: ${domain}`,
             priority: 2
         });
+        console.log('[FocusSphere] Created focus alert notification');
     }
 });
 
@@ -863,13 +868,16 @@ async function checkTaskReminders() {
             // Pick one randomly
             const task = uncompleted[Math.floor(Math.random() * uncompleted.length)];
             
-            chrome.notifications.create({
+            // Use data URL icon
+            const iconDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGLSURBVFhH7ZY9TsNAEIXXDhJCNByBggNQcQQKjoAERRoKJI5AwRFoKDgCBUegouAINBScgIIjxHm8M45JYuzd2F7+pE+x117P25mdWSchBIP/jJAKpRg2C6lQisO4OQvPIuBHPMqKL5EpJ+F5BE55lBV3IuBJ+AcBPyLgRRT8hYBXUSCfCXkWBfKZEM+iwJsI8CYC3kTAiwjwJgp8EgU+iQJvIsCbCPAmAryJAm8iwJsI8CYCvIkCbyLAmwjwJgJ+RIA3EeBNFPgkCnyKAp9EgU+iwCdR4FMU+BQFPkWBT1HgUxT4FAU+RYFPUeBTFHgTAd5EgDcR4E0EeBMB3kSBN1HgTRR4EwXeRIE3UeBNFHgTBd5EgTdR4E0UeBMF3kSBN1HgTRR4EwXeRIE3UeBdhHoVAbfC30XAtfB3EXAV8l0EdCH8XQRciYAbEeBKBLgSAa5EgCsR4EoEuBIBrkSAKxHgSgS4EgGuRIArEeBKBLgSAf8iwIsI8CICvIgAL6LAiyj4G4F/FQkh/AF9ywR8i4eZuwAAAABJRU5ErkJggg==';
+            chrome.notifications.create(`task-reminder-${Date.now()}`, {
                 type: 'basic',
-                iconUrl: 'icon-128.png', 
+                iconUrl: iconDataUrl,
                 title: 'Task Reminder 📝',
                 message: `Don't forget: ${task.title}`,
                 priority: 1
             });
+            console.log('[FocusSphere] Created task reminder notification');
         }
     } catch (e) {
         console.error("Error checking task reminders:", e);
