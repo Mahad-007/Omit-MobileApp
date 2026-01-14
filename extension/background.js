@@ -245,6 +245,31 @@ async function checkAndBlockTabs() {
   }
 }
 
+// Helper to check if a visited domain matches any distracting domain (including subdomains)
+function isMatchingDomain(visitedDomain, blockedDomain) {
+  if (!visitedDomain || !blockedDomain) return false;
+  
+  // Exact match
+  if (visitedDomain === blockedDomain) return true;
+  
+  // Check if visited domain is a subdomain of blocked domain
+  // e.g., "m.youtube.com" should match "youtube.com"
+  if (visitedDomain.endsWith('.' + blockedDomain)) return true;
+  
+  return false;
+}
+
+function isDomainInSet(domain, domainSet) {
+  if (!domain) return false;
+  
+  for (const blockedDomain of domainSet) {
+    if (isMatchingDomain(domain, blockedDomain)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Time Tracking Logic
 let pendingSavedHours = 0;
 let pendingWastedHours = 0;
@@ -294,7 +319,8 @@ async function trackTime() {
     const domain = extractDomain(currentUrl);
     // Use distractingDomains (all sites in block list) for wasted time tracking
     // This includes sites set to "focus mode only" even when focus mode is off
-    const isDistractingSite = domain && distractingDomains.has(domain);
+    // Use isDomainInSet for subdomain matching (e.g., m.youtube.com matches youtube.com)
+    const isDistractingSite = isDomainInSet(domain, distractingDomains);
     const isBlockedPage = currentUrl.includes(chrome.runtime.getURL("blocked.html"));
 
     // Time tracking logic:
@@ -314,11 +340,11 @@ async function trackTime() {
       // User is on a distracting site (any site in the block list) - wasted time
       pendingWastedHours += 1 / 60;
       isWastingTime = true;
-      console.log(`[FocusSphere] Tracking wasted time (on distracting site: ${domain})`);
+      console.log(`[FocusSphere] Tracking wasted time (on distracting site: ${domain}). Distracting domains: ${Array.from(distractingDomains).join(', ')}`);
     } else {
       // All other cases - productive time (saved)
       pendingSavedHours += 1 / 60;
-      console.log("[FocusSphere] Tracking saved time");
+      console.log(`[FocusSphere] Tracking saved time. Current domain: ${domain}. Distracting domains (${distractingDomains.size}): ${Array.from(distractingDomains).join(', ')}`);
     }
 
     // Track wasted time for notifications (every 10 minutes)
@@ -652,7 +678,7 @@ chrome.webNavigation.onBeforeNavigate.addListener((details) => {
     if (!settings.focusAlerts) return;
 
     const domain = extractDomain(details.url);
-    if (domain && blockedDomains.has(domain)) {
+    if (isDomainInSet(domain, blockedDomains)) {
         // Prepare notification
         chrome.notifications.create({
             type: 'basic',
