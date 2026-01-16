@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { storage, Task, DailyStats } from "@/lib/storage";
+import CalendarModal from "@/components/CalendarModal";
 
 interface WeeklyData {
   day: string;
@@ -23,6 +24,7 @@ export default function Stats() {
   const [weeklyWastedHours, setWeeklyWastedHours] = useState(0);
   const [todaySavedHours, setTodaySavedHours] = useState(0);
   const [todayWastedHours, setTodayWastedHours] = useState(0);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -113,7 +115,10 @@ export default function Stats() {
           <span className="material-symbols-outlined text-muted-foreground">person</span>
         </div>
         <h2 className="text-lg font-bold tracking-tight">Insights</h2>
-        <button className="size-10 flex items-center justify-center rounded-full bg-card border border-border">
+        <button 
+          onClick={() => setIsCalendarOpen(true)}
+          className="size-10 flex items-center justify-center rounded-full bg-card border border-border transition-colors hover:bg-muted"
+        >
           <span className="material-symbols-outlined text-muted-foreground">calendar_today</span>
         </button>
       </header>
@@ -285,6 +290,10 @@ export default function Stats() {
           </p>
         </div>
       </section>
+      <CalendarModal 
+        isOpen={isCalendarOpen} 
+        onClose={() => setIsCalendarOpen(false)} 
+      />
     </div>
   );
 }
