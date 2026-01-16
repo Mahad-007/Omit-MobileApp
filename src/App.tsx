@@ -10,8 +10,9 @@ import Layout from "./pages/Layout";
 import Dashboard from "./pages/Dashboard";
 import SocialBlocker from "./pages/SocialBlocker";
 import Tasks from "./pages/Tasks";
-import Motivation from "./pages/Motivation";
+import Stats from "./pages/Stats";
 import Settings from "./pages/Settings";
+import FocusTimer from "./pages/FocusTimer";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -51,7 +52,7 @@ const App = () => {
 
     return (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <TooltipProvider>
         <AuthProvider>
           <Toaster />
@@ -79,8 +80,9 @@ const App = () => {
                 <Route index element={<Dashboard />} />
                 <Route path="blocker" element={<SocialBlocker />} />
                 <Route path="tasks" element={<Tasks />} />
-                <Route path="motivation" element={<Motivation />} />
+                <Route path="stats" element={<Stats />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="timer" element={<FocusTimer />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />

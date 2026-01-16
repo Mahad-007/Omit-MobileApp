@@ -1,16 +1,12 @@
-import { DashboardCard } from "@/components/DashboardCard";
-import { Settings as SettingsIcon, Bell, Moon, Shield } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
-
+import { useNavigate } from "react-router-dom";
 import { storage } from "@/lib/storage";
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState(storage.getSettings());
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
@@ -31,119 +27,165 @@ export default function Settings() {
     }
   };
 
+  const userName = user?.email?.split('@')[0] || 'User';
+  const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h2 className="text-3xl font-bold text-foreground mb-2">Settings</h2>
-        <p className="text-muted-foreground">Customize your Omit experience</p>
-      </div>
+    <div className="min-h-screen flex flex-col pb-24">
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-md">
+        <div className="flex items-center p-4 pb-2 justify-between">
+          <button 
+            onClick={() => navigate('/')}
+            className="text-primary flex size-12 shrink-0 items-center cursor-pointer"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>arrow_back_ios_new</span>
+          </button>
+          <h2 className="text-foreground text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-12">
+            Settings
+          </h2>
+        </div>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DashboardCard title="Notifications" icon={Bell}>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary">
-              <div>
-                <Label htmlFor="task-reminders" className="text-base font-medium cursor-pointer">
-                  Task Reminders
-                </Label>
-                <p className="text-sm text-muted-foreground">Get notified about upcoming tasks</p>
-              </div>
-              <Switch
-                id="task-reminders"
-                checked={settings.taskReminders}
-                onCheckedChange={(checked) => handleSettingChange('taskReminders', checked)}
-              />
+      <main className="flex-1 px-4 pb-10 space-y-6">
+        {/* Profile Section */}
+        <section className="mt-4">
+          <div className="flex items-center gap-4 p-5 rounded-xl border border-border bg-card">
+            <div className="size-16 rounded-full bg-primary/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-3xl">person</span>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary">
-              <div>
-                <Label htmlFor="focus-alerts" className="text-base font-medium cursor-pointer">
-                  Focus Alerts
-                </Label>
-                <p className="text-sm text-muted-foreground">Alerts when you visit blocked sites</p>
-              </div>
-              <Switch 
-                id="focus-alerts" 
-                checked={settings.focusAlerts}
-                onCheckedChange={(checked) => handleSettingChange('focusAlerts', checked)}
-              />
+            <div className="flex-1">
+              <p className="text-foreground text-lg font-bold">{displayName}</p>
+              <p className="text-muted-foreground text-sm">{user?.email || "Not logged in"}</p>
             </div>
           </div>
-        </DashboardCard>
+        </section>
 
-        <DashboardCard title="Appearance" icon={Moon}>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary">
-              <div>
-                <Label htmlFor="dark-mode" className="text-base font-medium cursor-pointer">
-                  Dark Mode
-                </Label>
-                <p className="text-sm text-muted-foreground">Switch to dark theme</p>
+        {/* Appearance */}
+        <section className="space-y-2">
+          <h3 className="text-muted-foreground text-sm font-bold uppercase tracking-widest opacity-60 px-1">
+            Appearance
+          </h3>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">dark_mode</span>
+                <div>
+                  <p className="text-foreground text-base font-medium">Dark Mode</p>
+                  <p className="text-muted-foreground text-xs">Switch to dark theme</p>
+                </div>
               </div>
-              <Switch
-                id="dark-mode"
-                checked={theme === "dark"}
-                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-              />
-            </div>
-            <div className="p-4 rounded-lg bg-gradient-card">
-              <p className="text-sm text-muted-foreground">
-                More theme options coming soon!
-              </p>
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className={`relative flex h-[28px] w-[48px] cursor-pointer items-center rounded-full border-none p-0.5 transition-all ${theme === 'dark' ? 'justify-end bg-primary' : 'bg-muted'}`}
+              >
+                <div className="h-full w-[24px] rounded-full bg-white shadow-sm"></div>
+              </button>
             </div>
           </div>
-        </DashboardCard>
+        </section>
 
-        <DashboardCard title="Focus Settings" icon={Shield}>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary">
-              <div>
-                <Label htmlFor="strict-mode" className="text-base font-medium cursor-pointer">
-                  Strict Mode
-                </Label>
-                <p className="text-sm text-muted-foreground">Cannot disable blocking once started</p>
+        {/* Focus Settings */}
+        <section className="space-y-2">
+          <h3 className="text-muted-foreground text-sm font-bold uppercase tracking-widest opacity-60 px-1">
+            Focus Settings
+          </h3>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">verified_user</span>
+                <div>
+                  <p className="text-foreground text-base font-medium">Strict Mode</p>
+                  <p className="text-muted-foreground text-xs">Cannot disable blocking once started</p>
+                </div>
               </div>
-              <Switch
-                id="strict-mode"
-                checked={settings.strictMode}
-                onCheckedChange={(checked) => handleSettingChange('strictMode', checked)}
-              />
+              <button 
+                onClick={() => handleSettingChange('strictMode', !settings.strictMode)}
+                className={`relative flex h-[28px] w-[48px] cursor-pointer items-center rounded-full border-none p-0.5 transition-all ${settings.strictMode ? 'justify-end bg-primary' : 'bg-muted'}`}
+              >
+                <div className="h-full w-[24px] rounded-full bg-white shadow-sm"></div>
+              </button>
             </div>
-            <div className="p-4 rounded-lg bg-secondary">
-              <Label className="text-sm text-muted-foreground mb-2 block">
-                Default Focus Duration
-              </Label>
-              <input
-                type="number"
-                value={settings.defaultFocusDuration}
-                onChange={(e) => handleSettingChange('defaultFocusDuration', Number(e.target.value))}
-                className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground"
-                min="5"
-                max="480"
-              />
+            <div className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="material-symbols-outlined text-primary">timer</span>
+                <p className="text-foreground text-base font-medium">Default Focus Duration</p>
+              </div>
+              <div className="flex gap-2">
+                {[15, 25, 45, 60, 90].map((mins) => (
+                  <button
+                    key={mins}
+                    onClick={() => handleSettingChange('defaultFocusDuration', mins)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      settings.defaultFocusDuration === mins 
+                        ? 'bg-primary text-white' 
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {mins}m
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </DashboardCard>
+        </section>
 
-        <DashboardCard title="Account" icon={SettingsIcon}>
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-secondary">
-              <p className="text-sm font-medium mb-1">Email</p>
-              <p className="text-sm text-muted-foreground">{user?.email || "Not logged in"}</p>
+        {/* Notifications */}
+        <section className="space-y-2">
+          <h3 className="text-muted-foreground text-sm font-bold uppercase tracking-widest opacity-60 px-1">
+            Notifications
+          </h3>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">notifications</span>
+                <div>
+                  <p className="text-foreground text-base font-medium">Task Reminders</p>
+                  <p className="text-muted-foreground text-xs">Get notified about upcoming tasks</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleSettingChange('taskReminders', !settings.taskReminders)}
+                className={`relative flex h-[28px] w-[48px] cursor-pointer items-center rounded-full border-none p-0.5 transition-all ${settings.taskReminders ? 'justify-end bg-primary' : 'bg-muted'}`}
+              >
+                <div className="h-full w-[24px] rounded-full bg-white shadow-sm"></div>
+              </button>
             </div>
-            <div className="p-4 rounded-lg bg-secondary">
-              <p className="text-sm font-medium mb-1">Member Since</p>
-              <p className="text-sm text-muted-foreground">November 2025</p>
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">warning</span>
+                <div>
+                  <p className="text-foreground text-base font-medium">Focus Alerts</p>
+                  <p className="text-muted-foreground text-xs">Alerts when visiting blocked sites</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleSettingChange('focusAlerts', !settings.focusAlerts)}
+                className={`relative flex h-[28px] w-[48px] cursor-pointer items-center rounded-full border-none p-0.5 transition-all ${settings.focusAlerts ? 'justify-end bg-primary' : 'bg-muted'}`}
+              >
+                <div className="h-full w-[24px] rounded-full bg-white shadow-sm"></div>
+              </button>
             </div>
-            <Button variant="destructive" className="w-full" onClick={handleSignOut}>
-              Sign Out
-            </Button>
           </div>
-        </DashboardCard>
-      </div>
+        </section>
 
-      <div className="flex justify-end pt-4">
-         <p className="text-sm text-muted-foreground">Settings are saved automatically</p>
-      </div>
+        {/* Account Actions */}
+        <section className="space-y-3 pt-4">
+          <button 
+            onClick={handleSignOut}
+            className="w-full py-4 rounded-xl bg-destructive/10 text-destructive font-bold hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined">logout</span>
+            Sign Out
+          </button>
+        </section>
+
+        {/* Footer */}
+        <div className="text-center pt-4">
+          <p className="text-muted-foreground text-xs">Settings are saved automatically</p>
+          <p className="text-muted-foreground/60 text-xs mt-2">Deep Work OS v1.0</p>
+        </div>
+      </main>
     </div>
   );
 }

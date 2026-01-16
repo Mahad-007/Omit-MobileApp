@@ -99,6 +99,7 @@ export default {
         "card": "var(--shadow-card)",
         "elevated": "var(--shadow-elevated)",
         "glow": "var(--shadow-glow)",
+        "zen": "var(--shadow-zen)",
       },
       backgroundImage: {
         "gradient-card": "var(--gradient-card)",
@@ -106,7 +107,10 @@ export default {
         "gradient-accent": "var(--gradient-accent)",
       },
       fontFamily: {
-        sans: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        sans: ["Manrope", "Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        display: ["Manrope", "sans-serif"],
+        serif: ["Georgia", "serif"],
+        mono: ["JetBrains Mono", "monospace"],
       },
     },
   },

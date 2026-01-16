@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Clock, LogOut } from "lucide-react";
+import { Clock, LogOut, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,21 @@ export function Header() {
   const navigate = useNavigate();
   const [focusTime, setFocusTime] = useState(0);
   const [isActive, setIsActive] = useState(false);
+
+  // Get current greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
+  // Get formatted date
+  const getFormattedDate = () => {
+    const now = new Date();
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    return now.toLocaleDateString('en-US', options).toUpperCase();
+  };
 
   // Initialize state from localStorage
   useEffect(() => {
@@ -63,9 +78,8 @@ export function Header() {
     setIsActive(newState);
     
     const now = Date.now();
-    let currentAccumulated = focusTime; // This serves as the base
+    let currentAccumulated = focusTime;
     
-    // If we are getting current state from storage to be safe
     const savedStateStr = localStorage.getItem("focusTimerState");
     let savedStartTime = null;
     let savedAccumulated = 0;
@@ -77,22 +91,14 @@ export function Header() {
     }
 
     if (newState) {
-      // STARTING
-      // If we were paused, our displayed focusTime is the accumulated time.
-      // We set start time to NOW.
-      // Accumulated remains what it was.
-      
       const stateToSave = {
         isActive: true,
         startTime: now,
-        accumulatedTime: savedAccumulated // Keep existing accumulated
+        accumulatedTime: savedAccumulated
       };
       localStorage.setItem("focusTimerState", JSON.stringify(stateToSave));
       
     } else {
-      // PAUSING
-      // Calculate final accumulated time
-      // New accumulated = Old accumulated + (Now - StartTime)
       if (savedStartTime) {
         const elapsed = Math.floor((now - savedStartTime) / 1000);
         currentAccumulated = savedAccumulated + elapsed;
@@ -113,6 +119,16 @@ export function Header() {
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatTimeShort = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleSignOut = async () => {
@@ -140,62 +156,121 @@ export function Header() {
   };
 
   return (
-    <header className="min-h-14 lg:h-16 bg-card border-b border-border flex flex-col lg:flex-row items-center justify-between px-3 lg:px-6 py-2 lg:py-0 gap-2 lg:gap-0">
-      <div className="flex items-center gap-2 lg:gap-4 w-full lg:w-auto justify-between lg:justify-start">
-        {/* Logo on mobile */}
-        <div className="flex items-center gap-2 lg:hidden">
-          <img 
-            src="/omit-logo.png" 
-            alt="Omit Logo" 
-            className="w-8 h-8 object-contain"
-          />
-          <span className="font-bold text-foreground">Omit</span>
+    <header className="bg-transparent pt-6 lg:pt-8 px-4 lg:px-6 pb-4">
+      {/* Mobile Layout */}
+      <div className="lg:hidden">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <img 
+              src="/omit-logo.png" 
+              alt="Omit Logo" 
+              className="w-8 h-8 object-contain"
+            />
+            <span className="font-bold text-foreground">Omit</span>
+          </div>
+          <button 
+            onClick={() => navigate('/settings')}
+            className="flex items-center justify-center rounded-full h-10 w-10 bg-card text-foreground hover:bg-accent transition-colors border border-border/50"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
         </div>
         
-        <div className="flex items-center gap-2 lg:gap-3 bg-gradient-card px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg">
-          <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-primary" />
-          <div>
-            <p className="text-[10px] lg:text-xs text-muted-foreground">Focus Time</p>
-            <p className="text-sm lg:text-lg font-bold text-foreground">{formatTime(focusTime)}</p>
+        {/* Greeting */}
+        <div className="flex flex-col gap-1 mb-4">
+          <p className="text-primary font-semibold text-xs tracking-[0.2em] uppercase">
+            TODAY • {getFormattedDate()}
+          </p>
+          <h2 className="text-foreground text-2xl font-bold leading-tight tracking-tight">
+            {getGreeting()}, {getUserDisplayName()}
+          </h2>
+        </div>
+        
+        {/* Focus Timer - Mobile */}
+        <div className="flex items-center justify-between bg-card/60 px-4 py-3 rounded-xl border border-border/50 shadow-soft">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isActive ? 'bg-primary/20' : 'bg-muted'}`}>
+              <Clock className={`w-5 h-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground leading-none">Focus Time</span>
+              <span className={`text-lg font-bold leading-none mt-1 ${isActive ? 'text-primary' : 'text-foreground'}`}>
+                {formatTimeShort(focusTime)}
+              </span>
+            </div>
           </div>
           <button
             onClick={toggleTimer}
-            className="ml-1 lg:ml-2 px-2 lg:px-3 py-1 text-[10px] lg:text-xs font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${
+              isActive 
+                ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' 
+                : 'bg-primary text-primary-foreground hover:opacity-90 shadow-glow'
+            }`}
           >
             {isActive ? "Pause" : "Start"}
           </button>
         </div>
       </div>
 
-      <div className="hidden lg:flex items-center gap-4">
-        <div className="text-right">
-          <p className="text-sm font-medium text-foreground">Welcome back, {getUserDisplayName()}!</p>
-          <p className="text-xs text-muted-foreground">Let's stay focused today</p>
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex items-start justify-between">
+        {/* Left side - Greeting */}
+        <div className="flex flex-col gap-1">
+          <p className="text-primary font-semibold text-xs tracking-[0.2em] uppercase">
+            TODAY • {getFormattedDate()}
+          </p>
+          <h2 className="text-foreground text-3xl font-bold leading-tight tracking-tight">
+            {getGreeting()}, {getUserDisplayName()}
+          </h2>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="outline-none">
-              <Avatar>
-                <AvatarFallback className="bg-gradient-primary text-primary-foreground cursor-pointer">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
+        
+        {/* Right side - controls */}
+        <div className="flex items-center gap-3">
+          {/* Focus timer */}
+          <div className="flex items-center gap-3 bg-card/60 px-4 py-2 rounded-xl border border-border/50 shadow-soft">
+            <Clock className="w-4 h-4 text-primary" />
+            <div className="flex flex-col">
+              <span className="text-[10px] text-muted-foreground leading-none">Focus Time</span>
+              <span className="text-sm font-bold text-foreground leading-none mt-0.5">{formatTime(focusTime)}</span>
+            </div>
+            <button
+              onClick={toggleTimer}
+              className={`ml-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-opacity ${
+                isActive 
+                  ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' 
+                  : 'bg-primary text-primary-foreground hover:opacity-90'
+              }`}
+            >
+              {isActive ? "Pause" : "Start"}
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">My Account</p>
-                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+          
+          {/* User dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="outline-none">
+                <Avatar>
+                  <AvatarFallback className="bg-primary text-primary-foreground cursor-pointer">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">My Account</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );

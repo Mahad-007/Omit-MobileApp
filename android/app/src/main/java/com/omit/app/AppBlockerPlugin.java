@@ -139,10 +139,23 @@ public class AppBlockerPlugin extends Plugin {
         JSArray result = new JSArray();
         for (ApplicationInfo app : apps) {
             // Filter to show only user-installed apps (not system apps)
-            if ((app.flags & ApplicationInfo.FLAG_SYSTEM) == 0) {
+            // Or apps that have been updated system apps
+            boolean isUserApp = (app.flags & ApplicationInfo.FLAG_SYSTEM) == 0 || (app.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+            
+            if (isUserApp) {
                 JSObject appInfo = new JSObject();
                 appInfo.put("packageName", app.packageName);
                 appInfo.put("appName", pm.getApplicationLabel(app).toString());
+                
+                // Get Icon
+                try {
+                    android.graphics.drawable.Drawable icon = pm.getApplicationIcon(app);
+                    String base64Icon = getBase64FromDrawable(icon);
+                    appInfo.put("icon", base64Icon);
+                } catch (Exception e) {
+                    appInfo.put("icon", "");
+                }
+                
                 result.put(appInfo);
             }
         }
@@ -150,6 +163,34 @@ public class AppBlockerPlugin extends Plugin {
         JSObject response = new JSObject();
         response.put("apps", result);
         call.resolve(response);
+    }
+    
+    private String getBase64FromDrawable(android.graphics.drawable.Drawable drawable) {
+        if (drawable == null) return "";
+        
+        android.graphics.Bitmap bitmap;
+        if (drawable instanceof android.graphics.drawable.BitmapDrawable) {
+            bitmap = ((android.graphics.drawable.BitmapDrawable) drawable).getBitmap();
+        } else {
+            // Handle adaptive icons or other drawables
+            bitmap = android.graphics.Bitmap.createBitmap(
+                drawable.getIntrinsicWidth(), 
+                drawable.getIntrinsicHeight(), 
+                android.graphics.Bitmap.Config.ARGB_8888
+            );
+            android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+            drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+            drawable.draw(canvas);
+        }
+        
+        // Resize to reduce payload size (e.g., 64x64 or 96x96)
+        int size = 96;
+        android.graphics.Bitmap resized = android.graphics.Bitmap.createScaledBitmap(bitmap, size, size, true);
+        
+        java.io.ByteArrayOutputStream byteArrayOutputStream = new java.io.ByteArrayOutputStream();
+        resized.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+        byte[] byteArray = byteArrayOutputStream.toByteArray();
+        return android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP);
     }
 
     private boolean isAccessibilityServiceEnabled(Context context) {
