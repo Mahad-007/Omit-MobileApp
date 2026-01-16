@@ -18,15 +18,14 @@ export function AndroidAppBlocker() {
   const [loading, setLoading] = useState(true);
 
   // Check if we're running in Capacitor (Android app)
-  if (!isCapacitor()) {
-    return null;
-  }
+  const isAndroid = isCapacitor();
 
   useEffect(() => {
+    if (!isAndroid) return;
     checkPermissions();
     loadInstalledApps();
     loadBlockedApps();
-  }, []);
+  }, [isAndroid]);
 
   const checkPermissions = async () => {
     try {
@@ -165,6 +164,11 @@ export function AndroidAppBlocker() {
     </div>
   );
 
+  // Return null for non-Android (after all hooks have been called)
+  if (!isAndroid) {
+    return null;
+  }
+
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -173,7 +177,7 @@ export function AndroidAppBlocker() {
           Android App Blocking
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 p-4 pt-0">
         {/* Permissions Section - Only show when permissions are missing */}
         {!permissions?.allGranted && (
           <div className="space-y-2">
@@ -197,12 +201,12 @@ export function AndroidAppBlocker() {
         )}
 
         {/* Monitoring Toggle */}
-        <div className="flex items-center justify-between p-4 bg-gradient-card rounded-lg border">
+        <div className="flex items-center justify-between p-3 bg-gradient-card rounded-lg border shadow-soft">
           <div className="flex items-center gap-3">
-            <Shield className={`w-6 h-6 ${isMonitoring ? "text-primary" : "text-muted-foreground"}`} />
+            <Shield className={`w-5 h-5 ${isMonitoring ? "text-primary" : "text-muted-foreground"}`} />
             <div>
-              <p className="font-medium">App Blocking</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-medium text-sm">App Blocking</p>
+              <p className="text-[10px] text-muted-foreground">
                 {isMonitoring ? "Active - blocking enabled" : "Inactive"}
               </p>
             </div>
@@ -211,14 +215,15 @@ export function AndroidAppBlocker() {
             checked={isMonitoring}
             onCheckedChange={toggleMonitoring}
             disabled={!permissions?.allGranted}
+            className="scale-90"
           />
         </div>
 
         {/* Apps List */}
         {permissions?.allGranted && (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">
-              Select Apps to Block ({installedApps.filter(a => a.blocked).length} selected)
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+              Select Apps ({installedApps.filter(a => a.blocked).length})
             </h4>
             
             {loading ? (
@@ -226,24 +231,40 @@ export function AndroidAppBlocker() {
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="max-h-64 overflow-y-auto space-y-1">
-                {installedApps.map((app) => (
-                  <div
-                    key={app.packageName}
-                    className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
-                      app.blocked ? "bg-destructive/10 border border-destructive/20" : "bg-secondary"
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium">{app.appName}</Label>
-                      <p className="text-xs text-muted-foreground truncate">{app.packageName}</p>
-                    </div>
-                    <Switch
-                      checked={app.blocked}
-                      onCheckedChange={() => toggleAppBlock(app.packageName)}
-                    />
+              <div className="max-h-[300px] overflow-y-auto space-y-1 pr-1 overscroll-contain -mx-1 px-1">
+            {installedApps.map((app) => (
+              <div
+                key={app.packageName}
+                className={`flex items-center justify-between p-2 rounded-lg transition-colors border ${
+                  app.blocked 
+                    ? "bg-destructive/5 border-destructive/20" 
+                    : "bg-secondary/40 hover:bg-secondary/60 border-transparent"
+                }`}
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0 pr-2">
+                  <div className="w-9 h-9 flex-shrink-0 bg-background rounded-md flex items-center justify-center border shadow-sm">
+                    {app.icon ? (
+                      <img 
+                        src={`data:image/png;base64,${app.icon}`} 
+                        alt={app.appName} 
+                        className="w-7 h-7 object-contain"
+                      />
+                    ) : (
+                      <Smartphone className="w-5 h-5 text-muted-foreground" />
+                    )}
                   </div>
-                ))}
+                  <div className="flex-1 min-w-0">
+                    <Label className="text-sm font-medium leading-none block truncate">{app.appName}</Label>
+                    <p className="text-[10px] text-muted-foreground truncate mt-0.5">{app.packageName}</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={app.blocked}
+                  onCheckedChange={() => toggleAppBlock(app.packageName)}
+                  className="scale-90 flex-shrink-0"
+                />
+              </div>
+            ))}
               </div>
             )}
           </div>

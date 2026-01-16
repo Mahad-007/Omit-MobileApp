@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Focus Timer - Deep Work</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#456a7d",
+                        "background-light": "#f5f8fa",
+                        "background-dark": "#1b242d",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .timer-ring {
+            transition: stroke-dashoffset 1s linear;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col items-center justify-between font-display text-white selection:bg-primary/30">
+<!-- Subtle Session Indicator at the Top -->
+<header class="w-full pt-16 px-8 flex flex-col items-center gap-2">
+<span class="text-[10px] uppercase tracking-[0.4em] text-primary font-bold opacity-80">Current Session</span>
+<h2 class="text-white/90 text-sm font-medium tracking-tight">DEEP WORK</h2>
+</header>
+<!-- Central Immersive Timer -->
+<main class="relative flex flex-col items-center justify-center flex-grow w-full">
+<!-- Circular Progress SVG Container -->
+<div class="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center">
+<!-- Background Ring -->
+<svg class="absolute inset-0 w-full h-full -rotate-90">
+<circle class="text-white/5" cx="50%" cy="50%" fill="transparent" r="48%" stroke="currentColor" stroke-width="1.5"></circle>
+<!-- Progress Ring -->
+<circle class="text-primary timer-ring" cx="50%" cy="50%" fill="transparent" r="48%" stroke="currentColor" stroke-dasharray="1000" stroke-dashoffset="350" stroke-linecap="round" stroke-width="2"></circle>
+</svg>
+<!-- Digital Clock Display -->
+<div class="flex flex-col items-center text-center">
+<span class="text-7xl font-extralight tracking-tighter text-white tabular-nums">
+                    25:00
+                </span>
+</div>
+</div>
+<!-- Task Label Below Timer -->
+<div class="mt-12 flex flex-col items-center gap-3 animate-pulse">
+<div class="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full backdrop-blur-sm border border-white/10">
+<span class="material-symbols-outlined text-[18px] text-primary">edit_note</span>
+<p class="text-white/60 text-sm font-light leading-normal">Focusing on <span class="text-white/90 font-normal">Designing UI Mockups</span></p>
+</div>
+</div>
+</main>
+<!-- Minimal Bottom Controls -->
+<footer class="w-full max-w-[480px] px-8 pb-12 flex flex-col gap-6">
+<!-- Progress Bar (Redundant but requested in component list) -->
+<div class="flex flex-col gap-3">
+<div class="flex gap-6 justify-between items-end">
+<p class="text-white/40 text-xs font-medium uppercase tracking-widest">Elapsed</p>
+<p class="text-white/80 text-sm font-medium">65%</p>
+</div>
+<div class="h-[2px] w-full bg-white/10 rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 65%;"></div>
+</div>
+</div>
+<!-- Button Actions -->
+<div class="flex gap-4 items-center">
+<button class="flex-1 h-14 flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 text-white font-semibold text-base transition-all active:scale-95 hover:bg-white/10">
+<span class="material-symbols-outlined text-xl">pause</span>
+<span>Pause</span>
+</button>
+<button class="flex-1 h-14 flex items-center justify-center gap-2 rounded-xl bg-primary text-white font-semibold text-base shadow-xl shadow-primary/20 transition-all active:scale-95 hover:brightness-110">
+<span class="material-symbols-outlined text-xl">stop</span>
+<span>End Session</span>
+</button>
+</div>
+<!-- Home Indicator Safe Area Space (iOS) -->
+<div class="h-2"></div>
+</footer>
+<!-- Distraction Free Overlay (Optional visual effect) -->
+<div class="fixed inset-0 pointer-events-none bg-gradient-to-b from-transparent via-transparent to-background-dark/40"></div>
+</body></html>

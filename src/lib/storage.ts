@@ -2,16 +2,21 @@
 export interface Task {
   id: string;
   title: string;
-  notes: string;
-  datetime?: string;
+  description?: string;
+  notes?: string; // legacy
+  dueDate?: string;
+  datetime?: string; // legacy
+  priority?: 'low' | 'medium' | 'high';
   completed: boolean;
+  createdAt?: string;
 }
 
 export interface BlockedApp {
   id: string;
   name: string;
   url: string;
-  blocked: boolean;
+  blocked?: boolean; // legacy
+  isEnabled?: boolean; // new
   blockMode: "always" | "focus";
   icon?: string;
 }
@@ -46,20 +51,38 @@ const STORAGE_KEYS = {
 };
 
 // Event system for real-time updates
-type StatsListener = () => void;
+type DataChangeListener = () => void;
+type DataChangeType = 'tasks' | 'blockedApps' | 'focusSessions' | 'stats' | 'settings' | 'all';
 
 class LocalStorageService {
-  private statsListeners: Set<StatsListener> = new Set();
+  private listeners: Map<DataChangeType, Set<DataChangeListener>> = new Map();
 
-  // Subscribe to stats changes (for real-time Dashboard updates)
-  onStatsChange(listener: StatsListener): () => void {
-    this.statsListeners.add(listener);
-    return () => this.statsListeners.delete(listener);
+  constructor() {
+    // Initialize listener sets for each type
+    const types: DataChangeType[] = ['tasks', 'blockedApps', 'focusSessions', 'stats', 'settings', 'all'];
+    types.forEach(type => this.listeners.set(type, new Set()));
   }
 
-  // Notify all listeners of stats changes
+  // Subscribe to data changes
+  onChange(type: DataChangeType, listener: DataChangeListener): () => void {
+    this.listeners.get(type)?.add(listener);
+    return () => this.listeners.get(type)?.delete(listener);
+  }
+
+  // Backward compatible method
+  onStatsChange(listener: DataChangeListener): () => void {
+    return this.onChange('stats', listener);
+  }
+
+  // Notify listeners of data changes
+  private notifyChange(type: DataChangeType) {
+    this.listeners.get(type)?.forEach(listener => listener());
+    this.listeners.get('all')?.forEach(listener => listener());
+  }
+
+  // Notify all listeners of stats changes (keeping for backward compatibility)
   private notifyStatsChange() {
-    this.statsListeners.forEach(listener => listener());
+    this.notifyChange('stats');
   }
   // Helper to keep extension synced whenever data changes
   public forceSync() {
@@ -148,6 +171,7 @@ class LocalStorageService {
     
     localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     this._updateExtensionSync();
+    this.notifyChange('tasks');
     return task;
   }
 
@@ -155,6 +179,7 @@ class LocalStorageService {
     const tasks = this.getTasks().filter((t) => t.id !== id);
     localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     this._updateExtensionSync();
+    this.notifyChange('tasks');
   }
 
   // --- BLOCKED APPS ---
@@ -214,6 +239,7 @@ class LocalStorageService {
 
     localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
     this._updateExtensionSync();
+    this.notifyChange('blockedApps');
     return savedApp;
   }
 
@@ -221,6 +247,7 @@ class LocalStorageService {
     const apps = this.getBlockedApps().filter((a) => a.id !== id);
     localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
     this._updateExtensionSync();
+    this.notifyChange('blockedApps');
   }
 
   toggleAppBlock(id: string): BlockedApp | null {
@@ -230,6 +257,7 @@ class LocalStorageService {
       app.blocked = !app.blocked;
       localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
       this._updateExtensionSync();
+      this.notifyChange('blockedApps');
       return app;
     }
     return null;
@@ -242,6 +270,7 @@ class LocalStorageService {
       app.blockMode = app.blockMode === 'always' ? 'focus' : 'always';
       localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
       this._updateExtensionSync();
+      this.notifyChange('blockedApps');
       return app;
     }
     return null;
@@ -386,7 +415,217 @@ class LocalStorageService {
       } else {
           allStats.push({ date: today, savedHours: 0, wastedHours: 0 });
       }
-      localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
+  }
+
+  // --- BULK TASKS SAVE ---
+  saveTasks(tasks: Task[]): void {
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    this._updateExtensionSync();
+    this.notifyChange('tasks');
+  }
+
+  // --- BULK BLOCKED APPS SAVE ---
+  saveBlockedApps(apps: BlockedApp[]): void {
+    localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
+    this._updateExtensionSync();
+    this.notifyChange('blockedApps');
+  }
+
+  // --- WEEKLY STATISTICS ---
+  
+  // Get the start of the week (Monday)
+  private getWeekStart(date: Date = new Date()): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  
+  // Get all stats for this week (Mon-Sun)
+  getWeeklyStats(): DailyStats[] {
+    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const allStats: DailyStats[] = data ? JSON.parse(data) : [];
+    
+    const weekStart = this.getWeekStart();
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    // Generate all 7 days of the week
+    const weeklyStats: DailyStats[] = [];
+    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const existingStat = allStats.find(s => s.date === dateStr);
+      weeklyStats.push(existingStat || { date: dateStr, savedHours: 0, wastedHours: 0 });
+    }
+    
+    return weeklyStats;
+  }
+  
+  // Get total focus hours for this week
+  getWeeklyFocusHours(): number {
+    const weeklyStats = this.getWeeklyStats();
+    return weeklyStats.reduce((sum, s) => sum + s.savedHours, 0);
+  }
+  
+  // Get total focus hours for last week
+  getPreviousWeekFocusHours(): number {
+    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const allStats: DailyStats[] = data ? JSON.parse(data) : [];
+    
+    const thisWeekStart = this.getWeekStart();
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(thisWeekStart);
+    lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
+    
+    let total = 0;
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(lastWeekStart);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const stat = allStats.find(s => s.date === dateStr);
+      if (stat) {
+        total += stat.savedHours;
+      }
+    }
+    
+    return total;
+  }
+  
+  // Get the best productive day this week
+  getBestProductiveDay(): { day: string; hours: number } | null {
+    const weeklyStats = this.getWeeklyStats();
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    let bestIndex = -1;
+    let bestHours = 0;
+    
+    weeklyStats.forEach((stat, index) => {
+      if (stat.savedHours > bestHours) {
+        bestHours = stat.savedHours;
+        bestIndex = index;
+      }
+    });
+    
+    if (bestIndex === -1 || bestHours === 0) return null;
+    
+    return { day: days[bestIndex], hours: bestHours };
+  }
+  
+  // Get tasks completed this week
+  getWeeklyTasksCompleted(): number {
+    const tasks = this.getTasks();
+    const weekStart = this.getWeekStart();
+    
+    return tasks.filter(t => {
+      if (!t.completed) return false;
+      // Check if task has createdAt within this week (as proxy for completion time)
+      if (t.createdAt) {
+        const taskDate = new Date(t.createdAt);
+        return taskDate >= weekStart;
+      }
+      return true; // Count all completed tasks if no date
+    }).length;
+  }
+  
+  // Get tasks completed last week
+  getPreviousWeekTasksCompleted(): number {
+    const tasks = this.getTasks();
+    const thisWeekStart = this.getWeekStart();
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    
+    return tasks.filter(t => {
+      if (!t.completed) return false;
+      if (t.createdAt) {
+        const taskDate = new Date(t.createdAt);
+        return taskDate >= lastWeekStart && taskDate < thisWeekStart;
+      }
+      return false;
+    }).length;
+  }
+  
+  // Calculate percentage change between two values
+  calculatePercentageChange(current: number, previous: number): number {
+    if (previous === 0) {
+      return current > 0 ? 100 : 0;
+    }
+    return Math.round(((current - previous) / previous) * 100);
+  }
+
+  // --- SAVED TIME (from completed focus sessions) ---
+  getSavedTime(): number {
+    const stats = this.getTodayStats();
+    return stats.savedHours;
+  }
+
+  // --- WASTED TIME ---
+  getWastedTime(): number {
+    const stats = this.getTodayStats();
+    return stats.wastedHours;
+  }
+
+  // --- ACTIVE FOCUS SESSION ---
+  startFocusSession(durationMinutes: number): void {
+    const endTime = Date.now() + (durationMinutes * 60 * 1000);
+    const session = {
+      startTime: Date.now(),
+      endTime,
+      duration: durationMinutes
+    };
+    localStorage.setItem('focussphere_current_session', JSON.stringify(session));
+    this._updateExtensionSync();
+  }
+
+  endFocusSession(): void {
+    const sessionData = localStorage.getItem('focussphere_current_session');
+    if (sessionData) {
+      try {
+        const session = JSON.parse(sessionData);
+        const elapsedMs = Date.now() - session.startTime;
+        const elapsedHours = elapsedMs / (1000 * 60 * 60);
+        
+        // Add to saved time
+        this.addSavedTime(elapsedHours);
+        
+        // Record the session
+        this.addFocusSession({
+          startTime: new Date(session.startTime).toISOString(),
+          durationMinutes: Math.round(elapsedMs / 60000),
+          completed: true,
+          appsBlockedCount: this.getBlockedApps().filter(a => a.isEnabled || a.blocked).length
+        });
+      } catch (e) {
+        console.error('Error ending focus session', e);
+      }
+    }
+    localStorage.removeItem('focussphere_current_session');
+    this._updateExtensionSync();
+  }
+
+  getActiveSession(): { startTime: number; endTime: number; duration: number } | null {
+    const sessionData = localStorage.getItem('focussphere_current_session');
+    if (!sessionData) return null;
+    
+    try {
+      const session = JSON.parse(sessionData);
+      if (session.endTime > Date.now()) {
+        return session;
+      }
+      // Session expired, clean up
+      localStorage.removeItem('focussphere_current_session');
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 }
 

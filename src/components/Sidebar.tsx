@@ -11,7 +11,7 @@ const navigation = [
 
 export function Sidebar() {
   return (
-    <aside className="w-64 bg-card border-r border-border flex flex-col h-screen sticky top-0">
+    <aside className="w-64 bg-card/95 backdrop-blur-md border-r border-border flex flex-col h-screen sticky top-0">
       <div className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
           <img 
@@ -35,7 +35,7 @@ export function Sidebar() {
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200"
             activeClassName="bg-secondary text-primary font-medium"
           >
-            <item.icon className="w-5 h-5" />
+            <item.icon className="icon-responsive" />
             <span>{item.name}</span>
           </NavLink>
         ))}

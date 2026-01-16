@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inbox - Task List</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#456a7d",
+                        "background-light": "#f5f8fa",
+                        "background-dark": "#1b242d",
+                        "accent-gold": "#A8906F",
+                        "ghost-surface": "#2a353f",
+                        "text-soft": "#E0E6EB",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 200, "GRAD" 0, "opsz" 24
+    }
+.task-checkbox:checked {
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuCwAhHK-W7dbkNYVZcYHILbUmq8p3N5kgY8DH9wUssRYKKxvHrYw8nwAg6abW-8FOZ_DJFUUi_u6ymwZon8O91f1BSPqDQCXPAqWiIL7PbozYDKX2UMl8Isoz3nqyBj3K3-gEteLzJ9XLDcZT8IVqCixMNuSoX7Igy-SdKOl4Fv_xsQRD-t-yy_ZguKcqQcktqqYcHenMj9hoQ-Ba2NUaYKouQtX1sQ7ginE25dpyuoTq50fCKI9Re6nVCvDZ2vdmlPZNMlh3szPho)
+    }
+.custom-scrollbar::-webkit-scrollbar {
+    width: 0;
+    background: transparent
+    }
+body {
+    -webkit-tap-highlight-color: transparent
+    }</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-text-soft transition-colors duration-300">
+<div class="relative flex h-screen w-full flex-col overflow-hidden max-w-[430px] mx-auto shadow-2xl border-x border-slate-200 dark:border-slate-800">
+<!-- Header Section -->
+<header class="flex flex-col px-6 pt-12 pb-6 gap-2 sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="flex justify-between items-center">
+<h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">Inbox</h1>
+<div class="flex gap-4">
+<button class="p-2 rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">search</span>
+</button>
+<button class="size-10 rounded-full overflow-hidden border-2 border-primary/20">
+<img alt="User Profile" data-alt="Minimalist user profile avatar circle" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCoK4yk16W3jPbAXlk8CjCnGFqewGeih2A2L55DEpa-AGMs83HGK3ICjImy0jPmjLa6vUQsEUPOGIHjHWSL7-NdlPy87oFnvxEzDiOi1367mndR0yvfZtJLzixQE0eIqKNUX84ScbjGPAfJxeiD7PcnmjbJOzfe5fGFZmT0leY-MGM3gFmWa6FIfAAQjKNIamSvZtKLghflqXaoazypI_EDnCoFOlVuxq5m30A89fZV_dWeqlL6JWjFE4Kdm3xlu5hCyttCP3AalM"/>
+</button>
+</div>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide">3 deep work sessions remaining</p>
+</header>
+<!-- Main Content (Scrollable) -->
+<main class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-32">
+<!-- Tabs -->
+<nav class="flex gap-8 border-b border-slate-200 dark:border-slate-800 mb-8 sticky top-[136px] bg-background-light dark:bg-background-dark z-10 py-2">
+<button class="relative pb-3 text-sm font-bold tracking-widest uppercase transition-colors text-primary">
+                    Today
+                    <span class="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></span>
+</button>
+<button class="pb-3 text-sm font-bold tracking-widest uppercase transition-colors text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
+                    Upcoming
+                </button>
+</nav>
+<!-- Today Section -->
+<section class="space-y-8 mb-12">
+<h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 flex items-center gap-3">
+                    Today <span class="h-px flex-1 bg-slate-100 dark:bg-slate-800"></span>
+</h2>
+<!-- Task Item 1 (Priority) -->
+<div class="flex items-center group gap-6 py-2">
+<div class="flex-shrink-0">
+<input class="task-checkbox size-7 rounded-full border-2 border-primary/40 bg-transparent text-primary focus:ring-offset-background-dark focus:ring-primary checked:bg-primary checked:border-primary transition-all cursor-pointer appearance-none" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-accent-gold text-[12px] fill-1">fiber_manual_record</span>
+<p class="text-lg font-medium text-slate-900 dark:text-text-soft truncate group-active:opacity-70">Deep work session: UI Design</p>
+</div>
+<p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Focus for 90 minutes</p>
+</div>
+<div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-600">drag_indicator</span>
+</div>
+</div>
+<!-- Task Item 2 -->
+<div class="flex items-center group gap-6 py-2">
+<div class="flex-shrink-0">
+<input class="task-checkbox size-7 rounded-full border-2 border-primary/40 bg-transparent text-primary focus:ring-offset-background-dark focus:ring-primary checked:bg-primary checked:border-primary transition-all cursor-pointer appearance-none" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-lg font-medium text-slate-900 dark:text-text-soft truncate group-active:opacity-70">Review sprint goals</p>
+<p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Engineering sync</p>
+</div>
+<div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-600">drag_indicator</span>
+</div>
+</div>
+<!-- Task Item 3 -->
+<div class="flex items-center group gap-6 py-2">
+<div class="flex-shrink-0">
+<input class="task-checkbox size-7 rounded-full border-2 border-primary/40 bg-transparent text-primary focus:ring-offset-background-dark focus:ring-primary checked:bg-primary checked:border-primary transition-all cursor-pointer appearance-none" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-lg font-medium text-slate-900 dark:text-text-soft truncate group-active:opacity-70">Meditative break</p>
+<p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">10 min breathing exercise</p>
+</div>
+<div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-600">drag_indicator</span>
+</div>
+</div>
+</section>
+<!-- Upcoming Section -->
+<section class="space-y-8">
+<h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 flex items-center gap-3">
+                    Tomorrow <span class="h-px flex-1 bg-slate-100 dark:bg-slate-800"></span>
+</h2>
+<!-- Task Item 4 -->
+<div class="flex items-center group gap-6 py-2 opacity-60">
+<div class="flex-shrink-0">
+<input class="task-checkbox size-7 rounded-full border-2 border-primary/20 bg-transparent text-primary focus:ring-offset-background-dark focus:ring-primary checked:bg-primary checked:border-primary transition-all cursor-pointer appearance-none" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-lg font-medium text-slate-900 dark:text-text-soft truncate">Client presentation prep</p>
+<p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Due Oct 14</p>
+</div>
+</div>
+<!-- Task Item 5 -->
+<div class="flex items-center group gap-6 py-2 opacity-60">
+<div class="flex-shrink-0">
+<input class="task-checkbox size-7 rounded-full border-2 border-primary/20 bg-transparent text-primary focus:ring-offset-background-dark focus:ring-primary checked:bg-primary checked:border-primary transition-all cursor-pointer appearance-none" type="checkbox"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-lg font-medium text-slate-900 dark:text-text-soft truncate">Refactor library</p>
+<p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Core components cleanup</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Quick Add Floating Action -->
+<div class="absolute bottom-24 left-1/2 -translate-x-1/2 z-30">
+<button class="bg-primary text-white size-16 rounded-full flex items-center justify-center shadow-[0_8px_24px_rgba(0,0,0,0.4)] hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-3xl font-light">add</span>
+</button>
+</div>
+<!-- Bottom Navigation -->
+<nav class="absolute bottom-0 w-full bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 px-8 py-4 z-20">
+<div class="flex justify-between items-center max-w-sm mx-auto">
+<button class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">grid_view</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-2xl fill-1">inbox</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">monitoring</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-2xl">settings</span>
+</button>
+</div>
+<!-- iOS Home Indicator Spacing -->
+<div class="h-4"></div>
+</nav>
+<!-- Visual Background Accents -->
+<div class="absolute -top-24 -right-24 size-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute bottom-48 -left-24 size-64 bg-accent-gold/5 rounded-full blur-3xl pointer-events-none"></div>
+</div>
+</body></html>

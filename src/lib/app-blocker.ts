@@ -3,6 +3,7 @@ import { registerPlugin } from '@capacitor/core';
 export interface AppInfo {
   packageName: string;
   appName: string;
+  icon?: string;
 }
 
 export interface PermissionStatus {

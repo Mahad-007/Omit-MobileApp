@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>App Blocked Overlay</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#226977",
+                        "background-light": "#f1f2f4",
+                        "background-dark": "#131415",
+                    },
+                    fontFamily: {
+                        "display": ["Epilogue", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .safe-area-top {
+            padding-top: env(safe-area-inset-top);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display h-screen overflow-hidden">
+<!-- Background Content (Simulating the blocked app) -->
+<div class="absolute inset-0 z-0 p-6 flex flex-col gap-6 opacity-40">
+<div class="h-12 w-full bg-gray-300 dark:bg-gray-800 rounded-lg"></div>
+<div class="h-64 w-full bg-gray-300 dark:bg-gray-800 rounded-xl"></div>
+<div class="flex gap-4">
+<div class="h-20 w-1/2 bg-gray-300 dark:bg-gray-800 rounded-lg"></div>
+<div class="h-20 w-1/2 bg-gray-300 dark:bg-gray-800 rounded-lg"></div>
+</div>
+<div class="h-40 w-full bg-gray-300 dark:bg-gray-800 rounded-xl"></div>
+</div>
+<!-- Overlay Container -->
+<div class="relative z-10 h-screen w-full flex flex-col items-center justify-between bg-background-dark/85 ios-blur px-6 text-white safe-area-top safe-area-bottom">
+<!-- Top Status/Icon -->
+<div class="pt-16 flex flex-col items-center">
+<div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-6 border border-primary/30">
+<span class="material-symbols-outlined text-primary text-3xl">timer_off</span>
+</div>
+<!-- HeadlineText Component Style -->
+<div class="max-w-xs mx-auto">
+<h2 class="text-white tracking-tight text-[24px] font-semibold leading-tight text-center">
+                    This app is blocked for your focus session.
+                </h2>
+<p class="text-white/50 text-center text-sm mt-3 font-normal">Stay on track. You're almost there.</p>
+</div>
+</div>
+<!-- Timer Component Style -->
+<div class="w-full max-w-[320px]">
+<div class="flex gap-4 py-8">
+<!-- Minutes -->
+<div class="flex grow basis-0 flex-col items-stretch gap-3">
+<div class="flex h-24 grow items-center justify-center rounded-2xl px-3 bg-white/5 border border-white/10">
+<p class="text-white text-4xl font-bold leading-tight tracking-tight">24</p>
+</div>
+<div class="flex items-center justify-center">
+<p class="text-white/40 text-xs font-medium uppercase tracking-widest">Minutes</p>
+</div>
+</div>
+<!-- Divider -->
+<div class="flex items-center justify-center pt-2">
+<span class="text-white/20 text-4xl font-light mb-8">:</span>
+</div>
+<!-- Seconds -->
+<div class="flex grow basis-0 flex-col items-stretch gap-3">
+<div class="flex h-24 grow items-center justify-center rounded-2xl px-3 bg-white/5 border border-white/10">
+<p class="text-white text-4xl font-bold leading-tight tracking-tight">59</p>
+</div>
+<div class="flex items-center justify-center">
+<p class="text-white/40 text-xs font-medium uppercase tracking-widest">Seconds</p>
+</div>
+</div>
+</div>
+</div>
+<!-- SingleButton Component Style -->
+<div class="w-full pb-16 flex flex-col items-center gap-6">
+<div class="flex w-full px-4 justify-center">
+<button class="flex w-full max-w-[320px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 bg-primary text-white text-lg font-bold leading-normal tracking-wide shadow-lg shadow-primary/20 active:scale-95 transition-transform">
+<span class="truncate">Back to Work</span>
+</button>
+</div>
+<!-- Subtle Dismissal -->
+<button class="text-white/30 text-sm font-medium hover:text-white/60 transition-colors">
+                I really need to use this app
+            </button>
+</div>
+</div>
+<!-- Background decorative element -->
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] overflow-hidden">
+<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]"></div>
+<div class="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]"></div>
+</div>
+</body></html>

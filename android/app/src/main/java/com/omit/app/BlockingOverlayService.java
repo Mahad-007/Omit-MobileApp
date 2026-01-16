@@ -167,6 +167,7 @@ public class BlockingOverlayService extends Service {
                 .setContentText("Protecting you from distractions")
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentIntent(pendingIntent)
+                .setColor(getColor(R.color.colorPrimary))
                 .setOngoing(true)
                 .build();
     }

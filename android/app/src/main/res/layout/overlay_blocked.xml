@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:background="#F0F5FF"
+    android:background="@color/dark_background"
     android:padding="32dp">
 
     <!-- Shield Icon -->
@@ -21,7 +21,7 @@
         android:layout_height="wrap_content"
         android:text="🛡️ App Blocked"
         android:textSize="28sp"
-        android:textColor="#1E40AF"
+        android:textColor="@color/colorPrimary"
         android:textStyle="bold"
         android:layout_marginBottom="16dp" />
 
@@ -32,7 +32,7 @@
         android:layout_height="wrap_content"
         android:text="This app is blocked"
         android:textSize="18sp"
-        android:textColor="#374151"
+        android:textColor="@color/dark_foreground"
         android:layout_marginBottom="24dp" />
 
     <!-- Message -->
@@ -41,7 +41,7 @@
         android:layout_height="wrap_content"
         android:text="Stay focused! You've chosen to block this app."
         android:textSize="14sp"
-        android:textColor="#6B7280"
+        android:textColor="@color/dark_muted"
         android:textAlignment="center"
         android:layout_marginBottom="48dp" />
 
@@ -52,7 +52,7 @@
         android:layout_height="56dp"
         android:text="Go Back"
         android:textSize="16sp"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/white"
         android:background="@drawable/button_primary"
         android:layout_marginBottom="16dp" />
 
@@ -63,7 +63,7 @@
         android:layout_height="56dp"
         android:text="Open Omit"
         android:textSize="16sp"
-        android:textColor="#1E40AF"
+        android:textColor="@color/colorPrimary"
         android:background="@drawable/button_outline" />
 
 </LinearLayout>

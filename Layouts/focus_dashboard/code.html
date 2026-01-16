@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#456a7d",
+                        "background-light": "#f5f8fa",
+                        "background-dark": "#1b242d",
+                        "surface-dark": "#2a353f",
+                        "border-dark": "#43494c",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+        .soft-glow {
+            box-shadow: 0 0 20px 2px rgba(69, 106, 125, 0.3);
+        }
+        .zen-card-shadow {
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-[430px] mx-auto border-x border-transparent dark:border-white/5">
+<!-- Header Section -->
+<header class="flex items-center bg-transparent pt-12 px-6 pb-8 justify-between">
+<div class="flex flex-col gap-1">
+<p class="text-primary font-semibold text-xs tracking-[0.2em] uppercase">Today • Oct 24</p>
+<h2 class="text-white text-3xl font-bold leading-tight tracking-tight">Good morning, Alex</h2>
+</div>
+<div class="flex size-12 items-center justify-end">
+<button class="flex items-center justify-center rounded-full h-12 w-12 bg-surface-dark text-white hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</header>
+<!-- Stats Overview -->
+<section class="flex gap-4 px-6 mb-8">
+<div class="flex-1 flex flex-col gap-2 rounded-xl p-5 border border-border-dark bg-surface-dark/40 zen-card-shadow">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">checklist</span>
+<p class="text-slate-400 text-xs font-medium uppercase tracking-wider">Remaining</p>
+</div>
+<p class="text-white text-2xl font-bold">4</p>
+</div>
+<div class="flex-1 flex flex-col gap-2 rounded-xl p-5 border border-border-dark bg-surface-dark/40 zen-card-shadow">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">hourglass_empty</span>
+<p class="text-slate-400 text-xs font-medium uppercase tracking-wider">Deep Work</p>
+</div>
+<p class="text-white text-2xl font-bold">2h</p>
+</div>
+</section>
+<!-- Primary Focus Card -->
+<main class="px-6 mb-10">
+<div class="@container">
+<div class="flex flex-col items-stretch justify-start rounded-xl overflow-hidden bg-surface-dark zen-card-shadow">
+<div class="w-full h-48 bg-center bg-no-repeat bg-cover relative" data-alt="Calm dark blue architectural detail with soft lighting" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB1dvrXgUSTjGkKFwIjSlsoK2SPZd5SYsV80rEIBiYGpT9P3qYYr4fE6zTTgCMtprBcPEJFmLB2FsVkhctujrVuG7IdooYCF_bfdrD2dTxyOMJewCtIzaW-6pftXCYQkOfyEZBgw1PSz_35fUHp7clEv3Ejp9yiUOeeaccq7irSdHK37jjyx239ZPH7qKAJQe_iWfILWOZTeKa9jyyvlYOMMqdV2en0wqWegVkuwnSjMoXAGGrBL8FkDHoXrxCLyH6w8q78nCIkecU");'>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dark via-transparent to-transparent"></div>
+<div class="absolute top-4 left-4">
+<span class="px-3 py-1 bg-primary/80 backdrop-blur-md rounded-full text-[10px] font-bold text-white uppercase tracking-widest">Priority One</span>
+</div>
+</div>
+<div class="flex w-full flex-col gap-2 p-6">
+<p class="text-slate-400 text-xs font-semibold tracking-widest uppercase">Primary Focus</p>
+<h3 class="text-white text-2xl font-bold leading-tight tracking-tight">Finalize Design System</h3>
+<div class="flex items-center justify-between mt-4">
+<div class="flex items-center gap-2 text-slate-400">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-sm font-medium">90 min session</span>
+</div>
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-primary/20 text-primary border border-primary/30 text-sm font-bold">
+<span>Details</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Progress Section -->
+<section class="px-6 mb-12">
+<div class="flex flex-col gap-3 p-6 rounded-xl border border-border-dark/50 bg-surface-dark/20">
+<div class="flex justify-between items-end">
+<p class="text-white text-sm font-medium">Daily Progress</p>
+<p class="text-primary text-lg font-bold">65%</p>
+</div>
+<div class="h-1.5 w-full rounded-full bg-border-dark overflow-hidden">
+<div class="h-full rounded-full bg-primary" style="width: 65%;"></div>
+</div>
+<p class="text-slate-500 text-xs italic">Almost at your daily goal</p>
+</div>
+</section>
+<!-- Centered Action Button -->
+<section class="flex px-6 pb-20 justify-center">
+<button class="group flex min-w-[200px] items-center justify-center rounded-full h-16 px-8 bg-primary text-white gap-3 text-lg font-bold tracking-tight soft-glow active:scale-95 transition-all">
+<span class="material-symbols-outlined fill-current group-hover:scale-110 transition-transform">play_arrow</span>
+<span>Start Focus</span>
+</button>
+</section>
+<!-- Navigation Bar (iOS Style) -->
+<nav class="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto bg-background-dark/80 backdrop-blur-xl border-t border-border-dark/30 px-8 py-4 flex justify-between items-center z-10">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Focus</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">checklist</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Tasks</span>
+</button>
+<div class="relative -top-8">
+<button class="flex size-14 items-center justify-center rounded-full bg-surface-dark border border-border-dark text-white zen-card-shadow">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<button class="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Stats</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Profile</span>
+</button>
+</nav>
+<!-- Bottom Safe Area Spacer -->
+<div class="h-20"></div>
+</div>
+</body></html>
