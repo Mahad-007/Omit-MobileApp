@@ -314,6 +314,36 @@ class LocalStorageService {
     }
     return stats;
   }
+  
+  // Get stats for a specific date
+  getStatsForDate(dateStr: string): DailyStats {
+    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const allStats: DailyStats[] = data ? JSON.parse(data) : [];
+    
+    const stats = allStats.find(s => s.date === dateStr);
+    return stats || { date: dateStr, savedHours: 0, wastedHours: 0 };
+  }
+  
+  // Get all stats for a month
+  getMonthStats(year: number, month: number): DailyStats[] {
+    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const allStats: DailyStats[] = data ? JSON.parse(data) : [];
+    
+    const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+    return allStats.filter(s => s.date.startsWith(monthStr));
+  }
+  
+  // Get tasks completed on a specific date
+  getTasksCompletedOnDate(dateStr: string): number {
+    const tasks = this.getTasks();
+    return tasks.filter(t => {
+      if (!t.completed) return false;
+      if (t.createdAt) {
+        return t.createdAt.split('T')[0] === dateStr;
+      }
+      return false;
+    }).length;
+  }
 
   updateDailyStats(savedAdd: number, wastedAdd: number) {
     const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
