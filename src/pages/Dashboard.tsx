@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { storage, Task } from "@/lib/storage";
+import { storage, Task, Settings } from "@/lib/storage";
 import { useAuth } from "@/contexts/AuthContext";
+import { Switch } from "@/components/ui/switch";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -9,12 +10,16 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [focusHours, setFocusHours] = useState(0);
   const [focusModeActive, setFocusModeActive] = useState(false);
+  const [settings, setSettings] = useState<Settings>(storage.getSettings());
+  const [dailyUsage, setDailyUsage] = useState(0);
 
   useEffect(() => {
     // Load initial data
     const loadData = () => {
       setTasks(storage.getTasks());
       setFocusHours(storage.getSavedTime());
+      setSettings(storage.getSettings());
+      setDailyUsage(storage.getDailyAppUsage());
       
       // Check for active focus session
       const session = storage.getActiveSession();
@@ -29,6 +34,7 @@ export default function Dashboard() {
     // Subscribe to storage changes for real-time updates
     const unsubscribeTasks = storage.onChange('tasks', loadData);
     const unsubscribeStats = storage.onChange('stats', loadData);
+    const unsubscribeSettings = storage.onChange('settings', loadData);
     const unsubscribeAll = storage.onChange('all', loadData);
     
     // Also listen for cross-tab storage changes
@@ -38,6 +44,7 @@ export default function Dashboard() {
     return () => {
       unsubscribeTasks();
       unsubscribeStats();
+      unsubscribeSettings();
       unsubscribeAll();
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -67,12 +74,40 @@ export default function Dashboard() {
   const priorityTask = tasks.find(t => !t.completed && t.priority === 'high') || 
                        tasks.find(t => !t.completed);
 
+  // Daily time limit calculations
+  const remainingTime = settings.dailyTimeLimitEnabled 
+    ? Math.max(0, settings.dailyTimeLimitMinutes - dailyUsage)
+    : settings.dailyTimeLimitMinutes;
+  const usagePercent = settings.dailyTimeLimitEnabled && settings.dailyTimeLimitMinutes > 0
+    ? Math.min(100, Math.round((dailyUsage / settings.dailyTimeLimitMinutes) * 100))
+    : 0;
+
   const handleStartFocus = () => {
     if (focusModeActive) {
       navigate('/timer');
     } else {
       navigate('/blocker');
     }
+  };
+
+  const handleTimeLimitToggle = (enabled: boolean) => {
+    const newSettings = { ...settings, dailyTimeLimitEnabled: enabled };
+    setSettings(newSettings);
+    storage.saveSettings(newSettings);
+  };
+
+  const handleTimeLimitChange = (minutes: number) => {
+    const newSettings = { ...settings, dailyTimeLimitMinutes: minutes };
+    setSettings(newSettings);
+    storage.saveSettings(newSettings);
+  };
+
+  const formatTime = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
   };
 
   return (
@@ -112,6 +147,70 @@ export default function Dashboard() {
             <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Deep Work</p>
           </div>
           <p className="text-foreground text-2xl font-bold">{focusHours.toFixed(1)}h</p>
+        </div>
+      </section>
+
+      {/* Daily Time Limit Card */}
+      <section className="px-6 mb-8">
+        <div className="flex flex-col gap-4 rounded-xl p-5 border border-border bg-card/40 zen-card-shadow">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary">timer</span>
+              <div>
+                <p className="text-foreground text-base font-bold">Daily App Limit</p>
+                <p className="text-muted-foreground text-xs">
+                  {settings.dailyTimeLimitEnabled 
+                    ? `${formatTime(remainingTime)} remaining`
+                    : 'Set a daily usage limit'}
+                </p>
+              </div>
+            </div>
+            <Switch 
+              checked={settings.dailyTimeLimitEnabled}
+              onCheckedChange={handleTimeLimitToggle}
+            />
+          </div>
+          
+          {settings.dailyTimeLimitEnabled && (
+            <>
+              {/* Usage Progress Bar */}
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <p className="text-muted-foreground text-xs">
+                    Used: {formatTime(dailyUsage)} / {formatTime(settings.dailyTimeLimitMinutes)}
+                  </p>
+                  <p className={`text-xs font-semibold ${usagePercent >= 100 ? 'text-destructive' : usagePercent >= 80 ? 'text-warning' : 'text-primary'}`}>
+                    {usagePercent}%
+                  </p>
+                </div>
+                <div className="h-2 w-full rounded-full bg-border overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      usagePercent >= 100 ? 'bg-destructive' : usagePercent >= 80 ? 'bg-warning' : 'bg-primary'
+                    }`}
+                    style={{ width: `${usagePercent}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Duration Selector */}
+              <div className="flex gap-2">
+                {[30, 60, 90, 120].map((mins) => (
+                  <button
+                    key={mins}
+                    onClick={() => handleTimeLimitChange(mins)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      settings.dailyTimeLimitMinutes === mins 
+                        ? 'bg-primary text-white' 
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {formatTime(mins)}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -190,3 +289,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { storage } from "@/lib/storage";
+import { Switch } from "@/components/ui/switch";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -75,12 +76,10 @@ export default function Settings() {
                   <p className="text-muted-foreground text-xs">Switch to dark theme</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className={`relative flex h-[28px] w-[48px] cursor-pointer items-center rounded-full border-none p-0.5 transition-all ${theme === 'dark' ? 'justify-end bg-primary' : 'bg-muted'}`}
-              >
-                <div className="h-full w-[24px] rounded-full bg-white shadow-sm"></div>
-              </button>
+              <Switch 
+                checked={theme === 'dark'}
+                onCheckedChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              />
             </div>
           </div>
         </section>
@@ -99,12 +98,10 @@ export default function Settings() {
                   <p className="text-muted-foreground text-xs">Cannot disable blocking once started</p>
                 </div>
               </div>
-              <button 
-                onClick={() => handleSettingChange('strictMode', !settings.strictMode)}
-                className={`relative flex h-[28px] w-[48px] cursor-pointer items-center rounded-full border-none p-0.5 transition-all ${settings.strictMode ? 'justify-end bg-primary' : 'bg-muted'}`}
-              >
-                <div className="h-full w-[24px] rounded-full bg-white shadow-sm"></div>
-              </button>
+              <Switch 
+                checked={settings.strictMode}
+                onCheckedChange={(checked) => handleSettingChange('strictMode', checked)}
+              />
             </div>
             <div className="p-4">
               <div className="flex items-center gap-3 mb-3">
@@ -144,12 +141,10 @@ export default function Settings() {
                   <p className="text-muted-foreground text-xs">Get notified about upcoming tasks</p>
                 </div>
               </div>
-              <button 
-                onClick={() => handleSettingChange('taskReminders', !settings.taskReminders)}
-                className={`relative flex h-[28px] w-[48px] cursor-pointer items-center rounded-full border-none p-0.5 transition-all ${settings.taskReminders ? 'justify-end bg-primary' : 'bg-muted'}`}
-              >
-                <div className="h-full w-[24px] rounded-full bg-white shadow-sm"></div>
-              </button>
+              <Switch 
+                checked={settings.taskReminders}
+                onCheckedChange={(checked) => handleSettingChange('taskReminders', checked)}
+              />
             </div>
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
@@ -159,12 +154,10 @@ export default function Settings() {
                   <p className="text-muted-foreground text-xs">Alerts when visiting blocked sites</p>
                 </div>
               </div>
-              <button 
-                onClick={() => handleSettingChange('focusAlerts', !settings.focusAlerts)}
-                className={`relative flex h-[28px] w-[48px] cursor-pointer items-center rounded-full border-none p-0.5 transition-all ${settings.focusAlerts ? 'justify-end bg-primary' : 'bg-muted'}`}
-              >
-                <div className="h-full w-[24px] rounded-full bg-white shadow-sm"></div>
-              </button>
+              <Switch 
+                checked={settings.focusAlerts}
+                onCheckedChange={(checked) => handleSettingChange('focusAlerts', checked)}
+              />
             </div>
           </div>
         </section>

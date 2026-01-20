@@ -40,6 +40,8 @@ export interface Settings {
   focusAlerts: boolean;
   strictMode: boolean;
   defaultFocusDuration: number;
+  dailyTimeLimitEnabled: boolean;
+  dailyTimeLimitMinutes: number;
 }
 
 const STORAGE_KEYS = {
@@ -48,6 +50,7 @@ const STORAGE_KEYS = {
   FOCUS_SESSIONS: 'focussphere_focus_sessions',
   DAILY_STATS: 'focussphere_daily_stats',
   SETTINGS: 'focussphere_settings',
+  DAILY_APP_USAGE: 'focussphere_daily_app_usage',
 };
 
 // Event system for real-time updates
@@ -143,14 +146,75 @@ class LocalStorageService {
       taskReminders: true, 
       focusAlerts: true,
       strictMode: false,
-      defaultFocusDuration: 60
+      defaultFocusDuration: 60,
+      dailyTimeLimitEnabled: false,
+      dailyTimeLimitMinutes: 60
     };
   }
 
   saveSettings(settings: Settings): Settings {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     this._updateExtensionSync();
+    this.notifyChange('settings');
     return settings;
+  }
+
+  // --- DAILY APP USAGE ---
+  private getLocalDateString(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  getDailyAppUsage(): number {
+    const data = localStorage.getItem(STORAGE_KEYS.DAILY_APP_USAGE);
+    if (!data) return 0;
+    
+    try {
+      const usage = JSON.parse(data);
+      const today = this.getLocalDateString();
+      
+      // Reset if it's a new day
+      if (usage.date !== today) {
+        return 0;
+      }
+      return usage.minutes || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  addAppUsageTime(minutes: number): void {
+    if (minutes <= 0) return;
+    
+    const today = this.getLocalDateString();
+    const currentUsage = this.getDailyAppUsage();
+    
+    const usage = {
+      date: today,
+      minutes: currentUsage + minutes
+    };
+    
+    localStorage.setItem(STORAGE_KEYS.DAILY_APP_USAGE, JSON.stringify(usage));
+    this.notifyChange('stats');
+  }
+
+  isTimeLimitExceeded(): boolean {
+    const settings = this.getSettings();
+    if (!settings.dailyTimeLimitEnabled) return false;
+    
+    const usage = this.getDailyAppUsage();
+    return usage >= settings.dailyTimeLimitMinutes;
+  }
+
+  getRemainingTime(): number {
+    const settings = this.getSettings();
+    if (!settings.dailyTimeLimitEnabled) return Infinity;
+    
+    const usage = this.getDailyAppUsage();
+    return Math.max(0, settings.dailyTimeLimitMinutes - usage);
   }
 
   // --- TASKS ---

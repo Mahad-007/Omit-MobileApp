@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { storage, BlockedApp } from "@/lib/storage";
+import { storage, BlockedApp, Settings } from "@/lib/storage";
 import { toast } from "sonner";
 import { AndroidAppBlocker } from "@/components/AndroidAppBlocker";
 import { isCapacitor } from "@/lib/app-blocker";
+import { Switch } from "@/components/ui/switch";
 
 // Default app categories
 const defaultApps: { category: string; apps: Omit<BlockedApp, 'id'>[] }[] = [
@@ -35,10 +36,11 @@ const defaultApps: { category: string; apps: Omit<BlockedApp, 'id'>[] }[] = [
 export default function SocialBlocker() {
   const navigate = useNavigate();
   const [apps, setApps] = useState<BlockedApp[]>([]);
-  const [strictMode, setStrictMode] = useState(false);
+  const [settings, setSettings] = useState<Settings>(storage.getSettings());
   const [searchQuery, setSearchQuery] = useState('');
   const [focusDuration, setFocusDuration] = useState(25);
   const [focusModeActive, setFocusModeActive] = useState(false);
+  const [dailyUsage, setDailyUsage] = useState(0);
 
   useEffect(() => {
     // Load apps from storage or use defaults
@@ -58,15 +60,26 @@ export default function SocialBlocker() {
     }
 
     // Load settings
-    const settings = storage.getSettings();
-    setStrictMode(settings.strictMode);
-    setFocusDuration(settings.defaultFocusDuration);
+    const loadedSettings = storage.getSettings();
+    setSettings(loadedSettings);
+    setFocusDuration(loadedSettings.defaultFocusDuration);
+    setDailyUsage(storage.getDailyAppUsage());
 
     // Check for active session
     const session = storage.getActiveSession();
     if (session) {
       setFocusModeActive(true);
     }
+
+    // Subscribe to settings changes
+    const unsubscribeSettings = storage.onChange('settings', () => {
+      setSettings(storage.getSettings());
+      setDailyUsage(storage.getDailyAppUsage());
+    });
+
+    return () => {
+      unsubscribeSettings();
+    };
   }, []);
 
   const toggleApp = (id: string) => {
@@ -77,11 +90,10 @@ export default function SocialBlocker() {
     storage.saveBlockedApps(updatedApps);
   };
 
-  const toggleStrictMode = () => {
-    const newValue = !strictMode;
-    setStrictMode(newValue);
-    const settings = storage.getSettings();
-    storage.saveSettings({ ...settings, strictMode: newValue });
+  const toggleStrictMode = (checked: boolean) => {
+    const newSettings = { ...settings, strictMode: checked };
+    setSettings(newSettings);
+    storage.saveSettings(newSettings);
   };
 
   const handleSaveConfig = () => {
@@ -93,7 +105,7 @@ export default function SocialBlocker() {
       payload: {
         blockedApps: apps,
         focusMode: focusModeActive,
-        strictMode
+        strictMode: settings.strictMode
       }
     }, '*');
 
@@ -107,6 +119,12 @@ export default function SocialBlocker() {
       return;
     }
 
+    // Check if time limit is exceeded
+    if (storage.isTimeLimitExceeded()) {
+      toast.error('Daily time limit exceeded. Apps are blocked.');
+      return;
+    }
+
     storage.startFocusSession(focusDuration);
     setFocusModeActive(true);
 
@@ -116,7 +134,7 @@ export default function SocialBlocker() {
       payload: {
         blockedApps: apps,
         focusMode: true,
-        strictMode
+        strictMode: settings.strictMode
       }
     }, '*');
 
@@ -136,12 +154,38 @@ export default function SocialBlocker() {
     return getAppsByCategory(category).filter(app => app.isEnabled).length;
   };
 
+  const getAppIcon = (url: string) => {
+    if (url.includes('instagram')) return 'photo_camera';
+    if (url.includes('tiktok')) return 'music_note';
+    if (url.includes('youtube')) return 'play_circle';
+    if (url.includes('twitter')) return 'alternate_email';
+    if (url.includes('facebook')) return 'people';
+    if (url.includes('netflix')) return 'movie';
+    if (url.includes('twitch')) return 'videogame_asset';
+    if (url.includes('reddit')) return 'forum';
+    return 'block';
+  };
+
+  const formatTime = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+  };
+
+  // Calculate remaining time
+  const remainingTime = settings.dailyTimeLimitEnabled 
+    ? storage.getRemainingTime()
+    : Infinity;
+  const isTimeLimitExceeded = settings.dailyTimeLimitEnabled && remainingTime <= 0;
+
   // Check if we're on Android (Capacitor)
   const onAndroid = isCapacitor();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* TopAppBar */}
+    <div className="min-h-screen flex flex-col pb-24">
+      {/* Header */}
       <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-md">
         <div className="flex items-center p-4 pb-2 justify-between">
           <button 
@@ -155,57 +199,70 @@ export default function SocialBlocker() {
           </h2>
         </div>
 
-        {/* SearchBar */}
-        <div className="px-4 py-3">
-          <label className="flex flex-col min-w-40 h-12 w-full">
-            <div className="flex w-full flex-1 items-stretch rounded-lg h-full overflow-hidden shadow-sm">
-              <div className="text-muted-foreground flex border-none bg-card items-center justify-center pl-4">
-                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>search</span>
-              </div>
-              <input 
-                className="flex w-full min-w-0 flex-1 resize-none overflow-hidden text-foreground focus:outline-none focus:ring-0 border-none bg-card h-full placeholder:text-muted-foreground px-4 pl-2 text-base font-normal leading-normal" 
-                placeholder="Search apps..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        {/* Daily Limit Status */}
+        {settings.dailyTimeLimitEnabled && (
+          <div className={`mx-4 mb-3 p-3 rounded-xl flex items-center gap-3 ${
+            isTimeLimitExceeded 
+              ? 'bg-destructive/10 border border-destructive/20' 
+              : 'bg-primary/10 border border-primary/20'
+          }`}>
+            <span className={`material-symbols-outlined ${isTimeLimitExceeded ? 'text-destructive' : 'text-primary'}`}>
+              {isTimeLimitExceeded ? 'block' : 'timer'}
+            </span>
+            <div className="flex-1">
+              <p className={`text-sm font-semibold ${isTimeLimitExceeded ? 'text-destructive' : 'text-foreground'}`}>
+                {isTimeLimitExceeded ? 'Daily Limit Reached' : `${formatTime(remainingTime)} remaining today`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {isTimeLimitExceeded ? 'Apps are automatically blocked' : `Used ${formatTime(dailyUsage)} of ${formatTime(settings.dailyTimeLimitMinutes)}`}
+              </p>
             </div>
-          </label>
+          </div>
+        )}
+
+        {/* Search Bar */}
+        <div className="px-4 py-3">
+          <div className="flex w-full items-stretch rounded-xl h-12 overflow-hidden bg-card border border-border">
+            <div className="text-muted-foreground flex items-center justify-center pl-4">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>search</span>
+            </div>
+            <input 
+              className="flex w-full min-w-0 flex-1 resize-none overflow-hidden text-foreground focus:outline-none focus:ring-0 border-none bg-transparent h-full placeholder:text-muted-foreground px-4 pl-2 text-base font-normal leading-normal" 
+              placeholder="Search apps..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-10 space-y-6">
-        {/* Strict Mode Toggle */}
-        <section className="mt-2">
-          <div className="group relative">
-            <div className="flex flex-1 flex-col items-start justify-between gap-4 rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md">
-              <div className="flex w-full items-center justify-between">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-xl">verified_user</span>
-                    <p className="text-foreground text-base font-bold leading-tight">Strict Mode</p>
-                  </div>
-                  <p className="text-muted-foreground text-sm font-normal leading-relaxed mt-1">
-                    Prevent disabling focus sessions once started. Highly recommended for deep work.
-                  </p>
+      <main className="flex-1 px-4 space-y-6">
+        {/* Strict Mode Card */}
+        <section>
+          <div className="flex flex-col gap-4 rounded-xl p-5 border border-border bg-card/40 zen-card-shadow">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">verified_user</span>
+                <div>
+                  <p className="text-foreground text-base font-bold">Strict Mode</p>
+                  <p className="text-muted-foreground text-xs">Cannot disable blocking once started</p>
                 </div>
-                <button 
-                  onClick={toggleStrictMode}
-                  className={`relative flex h-[32px] w-[56px] cursor-pointer items-center rounded-full border-none p-1 transition-colors ${strictMode ? 'bg-primary' : 'bg-muted'}`}
-                >
-                  <div 
-                    className={`h-6 w-6 rounded-full bg-white shadow-lg transform transition-transform duration-200 ease-in-out ${strictMode ? 'translate-x-6' : 'translate-x-0'}`}
-                    style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                  ></div>
-                </button>
               </div>
+              <Switch 
+                checked={settings.strictMode}
+                onCheckedChange={toggleStrictMode}
+              />
             </div>
           </div>
         </section>
 
-        {/* Focus Duration */}
-        <section className="mt-2">
-          <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5">
-            <p className="text-foreground text-base font-bold">Focus Duration</p>
+        {/* Focus Duration Card */}
+        <section>
+          <div className="flex flex-col gap-4 rounded-xl p-5 border border-border bg-card/40 zen-card-shadow">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary">timer</span>
+              <p className="text-foreground text-base font-bold">Focus Duration</p>
+            </div>
             <div className="flex gap-2">
               {[15, 25, 45, 60, 90].map((mins) => (
                 <button
@@ -233,9 +290,9 @@ export default function SocialBlocker() {
           if (categoryApps.length === 0) return null;
 
           return (
-            <section key={category.category} className="space-y-2">
+            <section key={category.category} className="space-y-3">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-foreground text-sm font-bold uppercase tracking-widest opacity-60">
+                <h3 className="text-muted-foreground text-sm font-bold uppercase tracking-widest opacity-60">
                   {category.category}
                 </h3>
                 <span className={`text-xs font-medium ${getSelectedCount(category.category) > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
@@ -246,38 +303,27 @@ export default function SocialBlocker() {
                 {categoryApps.map((app) => (
                   <div 
                     key={app.id}
-                    className="flex items-center gap-4 bg-card rounded-xl px-4 min-h-[80px] py-3 justify-between shadow-sm border border-border"
+                    className="flex items-center gap-4 rounded-xl px-4 py-4 justify-between border border-border bg-card/40 zen-card-shadow"
                   >
                     <div className="flex items-center gap-4">
                       <div 
-                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-xl size-14 border border-border flex items-center justify-center bg-muted"
+                        className="aspect-square rounded-xl size-12 border border-border flex items-center justify-center bg-muted/50"
                       >
-                        <span className="material-symbols-outlined text-2xl text-muted-foreground">
-                          {app.url.includes('instagram') ? 'photo_camera' :
-                           app.url.includes('tiktok') ? 'music_note' :
-                           app.url.includes('youtube') ? 'play_circle' :
-                           app.url.includes('twitter') ? 'alternate_email' :
-                           app.url.includes('facebook') ? 'people' :
-                           app.url.includes('netflix') ? 'movie' :
-                           app.url.includes('twitch') ? 'videogame_asset' :
-                           app.url.includes('reddit') ? 'forum' : 'block'}
+                        <span className="material-symbols-outlined text-xl text-muted-foreground">
+                          {getAppIcon(app.url)}
                         </span>
                       </div>
                       <div className="flex flex-col justify-center">
-                        <p className="text-foreground text-base font-semibold leading-normal line-clamp-1">{app.name}</p>
+                        <p className="text-foreground text-base font-semibold leading-normal">{app.name}</p>
                         <p className="text-muted-foreground text-xs font-medium leading-normal">
                           {app.isEnabled ? 'Blocked during sessions' : 'Allowed'}
                         </p>
                       </div>
                     </div>
-                    <div className="shrink-0">
-                      <button
-                        onClick={() => toggleApp(app.id)}
-                        className={`relative flex h-[28px] w-[48px] cursor-pointer items-center rounded-full border-none p-0.5 transition-all ${app.isEnabled ? 'justify-end bg-primary' : 'bg-muted'}`}
-                      >
-                        <div className="h-full w-[24px] rounded-full bg-white shadow-sm"></div>
-                      </button>
-                    </div>
+                    <Switch
+                      checked={app.isEnabled}
+                      onCheckedChange={() => toggleApp(app.id)}
+                    />
                   </div>
                 ))}
               </div>
@@ -287,22 +333,22 @@ export default function SocialBlocker() {
       </main>
 
       {/* Fixed Bottom Actions */}
-      <div className="sticky bottom-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent">
-        <div className="flex gap-3">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent">
+        <div className="max-w-[430px] mx-auto flex gap-3">
           <button 
             onClick={handleSaveConfig}
-            className="flex-1 bg-card border border-border text-foreground font-bold py-4 rounded-xl shadow-lg hover:bg-card/80 transition-all flex items-center justify-center gap-2"
+            className="flex-1 bg-card border border-border text-foreground font-bold py-4 rounded-xl zen-card-shadow hover:bg-card/80 transition-all flex items-center justify-center gap-2"
           >
             <span>Save Config</span>
             <span className="material-symbols-outlined text-xl">check_circle</span>
           </button>
           <button 
             onClick={startFocusSession}
-            disabled={focusModeActive}
-            className="flex-1 bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={focusModeActive || isTimeLimitExceeded}
+            className="flex-1 bg-primary text-white font-bold py-4 rounded-xl soft-glow hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-xl">play_arrow</span>
-            <span>{focusModeActive ? 'Session Active' : 'Start Focus'}</span>
+            <span>{focusModeActive ? 'Session Active' : isTimeLimitExceeded ? 'Limit Reached' : 'Start Focus'}</span>
           </button>
         </div>
         {/* iOS Home Indicator Spacing */}
