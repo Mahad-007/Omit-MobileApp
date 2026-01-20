@@ -2,24 +2,24 @@
 <resources>
     <!-- Cosmic Night Theme Colors -->
     
-    <!-- Primary Colors -->
-    <color name="colorPrimary">#8B5CF6</color>
-    <color name="colorPrimaryDark">#7C3AED</color>
-    <color name="colorAccent">#A78BFA</color>
+    <!-- Primary Colors (Teal/Blue based) -->
+    <color name="colorPrimary">#3F7A94</color>
+    <color name="colorPrimaryDark">#336276</color>
+    <color name="colorAccent">#E3F2F7</color>
     
     <!-- Light Theme -->
-    <color name="light_background">#F5F3FF</color>
-    <color name="light_foreground">#3D2856</color>
+    <color name="light_background">#F4F7F9</color>
+    <color name="light_foreground">#2B353E</color>
     <color name="light_card">#FFFFFF</color>
-    <color name="light_muted">#9CA3AF</color>
-    <color name="light_border">#E5E0ED</color>
+    <color name="light_muted">#94A3B8</color>
+    <color name="light_border">#E0E7EC</color>
     
-    <!-- Dark Theme -->
-    <color name="dark_background">#1E1533</color>
-    <color name="dark_foreground">#E8E0F5</color>
-    <color name="dark_card">#2D2347</color>
-    <color name="dark_muted">#9B8FB5</color>
-    <color name="dark_border">#453A5C</color>
+    <!-- Dark Theme (Matching Deep Work Theme) -->
+    <color name="dark_background">#151E28</color>
+    <color name="dark_foreground">#E2E6EA</color>
+    <color name="dark_card">#202932</color>
+    <color name="dark_muted">#5F7184</color>
+    <color name="dark_border">#334155</color>
     
     <!-- Common -->
     <color name="white">#FFFFFF</color>

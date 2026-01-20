@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { storage, BlockedApp, Settings } from "@/lib/storage";
 import { toast } from "sonner";
 import { AndroidAppBlocker } from "@/components/AndroidAppBlocker";
-import { isCapacitor } from "@/lib/app-blocker";
+import AppBlocker, { isCapacitor } from "@/lib/app-blocker";
 import { Switch } from "@/components/ui/switch";
 
 // Default app categories
@@ -112,9 +112,18 @@ export default function SocialBlocker() {
     toast.success('Configuration saved!');
   };
 
-  const startFocusSession = () => {
-    const enabledApps = apps.filter(app => app.isEnabled);
-    if (enabledApps.length === 0) {
+  const startFocusSession = async () => {
+    let hasBlockedApps = false;
+    
+    if (onAndroid) {
+      const androidBlockedApps = JSON.parse(localStorage.getItem("android_blocked_apps") || "[]");
+      hasBlockedApps = androidBlockedApps.length > 0;
+    } else {
+      const enabledApps = apps.filter(app => app.isEnabled);
+      hasBlockedApps = enabledApps.length > 0;
+    }
+
+    if (!hasBlockedApps) {
       toast.error('Please select at least one app to block');
       return;
     }
@@ -123,6 +132,19 @@ export default function SocialBlocker() {
     if (storage.isTimeLimitExceeded()) {
       toast.error('Daily time limit exceeded. Apps are blocked.');
       return;
+    }
+
+    // Start native blocking for Android
+    if (onAndroid) {
+      try {
+        const androidBlockedApps = JSON.parse(localStorage.getItem("android_blocked_apps") || "[]");
+        await AppBlocker.setBlockedApps({ apps: androidBlockedApps });
+        await AppBlocker.startMonitoring();
+        localStorage.setItem("android_monitoring", "true");
+      } catch (error) {
+        console.error("Failed to enable native blocking", error);
+        toast.error("Failed to enable app blocking on device");
+      }
     }
 
     storage.startFocusSession(focusDuration);
@@ -184,7 +206,7 @@ export default function SocialBlocker() {
   const onAndroid = isCapacitor();
 
   return (
-    <div className="min-h-screen flex flex-col pb-24">
+    <div className="min-h-screen flex flex-col pb-48">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-md">
         <div className="flex items-center p-4 pb-2 justify-between">
@@ -333,15 +355,9 @@ export default function SocialBlocker() {
       </main>
 
       {/* Fixed Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent">
+      {/* Fixed Bottom Actions */}
+      <div className="fixed bottom-24 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent z-10">
         <div className="max-w-[430px] mx-auto flex gap-3">
-          <button 
-            onClick={handleSaveConfig}
-            className="flex-1 bg-card border border-border text-foreground font-bold py-4 rounded-xl zen-card-shadow hover:bg-card/80 transition-all flex items-center justify-center gap-2"
-          >
-            <span>Save Config</span>
-            <span className="material-symbols-outlined text-xl">check_circle</span>
-          </button>
           <button 
             onClick={startFocusSession}
             disabled={focusModeActive || isTimeLimitExceeded}
