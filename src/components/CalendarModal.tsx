@@ -16,6 +16,14 @@ interface DayData {
   isToday: boolean;
 }
 
+// Helper function to get local date string (YYYY-MM-DD) without timezone issues
+const getLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
@@ -39,12 +47,12 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
     if (startOffset < 0) startOffset = 6;
     
     const days: DayData[] = [];
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString(new Date());
     
     // Add days from previous month
     for (let i = startOffset - 1; i >= 0; i--) {
       const date = new Date(year, month, -i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = getLocalDateString(date);
       const stats = storage.getStatsForDate(dateStr);
       days.push({
         date,
@@ -60,7 +68,7 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
     // Add days of current month
     for (let d = 1; d <= lastDay.getDate(); d++) {
       const date = new Date(year, month, d);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = getLocalDateString(date);
       const stats = storage.getStatsForDate(dateStr);
       days.push({
         date,
@@ -77,7 +85,7 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
     const remaining = 42 - days.length;
     for (let i = 1; i <= remaining; i++) {
       const date = new Date(year, month + 1, i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = getLocalDateString(date);
       const stats = storage.getStatsForDate(dateStr);
       days.push({
         date,
