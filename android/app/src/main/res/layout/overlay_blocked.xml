@@ -20,10 +20,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="🛡️ App Blocked"
-        android:textSize="28sp"
-        android:textColor="@color/colorPrimary"
+        android:textSize="24sp"
+        android:textColor="@color/dark_foreground"
+        android:letterSpacing="0.05"
         android:textStyle="bold"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="8dp" />
 
     <!-- App Name -->
     <TextView
@@ -31,39 +32,46 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="This app is blocked"
-        android:textSize="18sp"
-        android:textColor="@color/dark_foreground"
-        android:layout_marginBottom="24dp" />
+        android:textSize="16sp"
+        android:textColor="@color/dark_muted"
+        android:letterSpacing="0.05"
+        android:textStyle="bold"
+        android:textAllCaps="true"
+        android:layout_marginBottom="32dp" />
 
     <!-- Message -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Stay focused! You've chosen to block this app."
-        android:textSize="14sp"
-        android:textColor="@color/dark_muted"
+        android:textSize="16sp"
+        android:lineSpacingExtra="4dp"
+        android:textColor="@color/dark_foreground"
         android:textAlignment="center"
+        android:alpha="0.8"
         android:layout_marginBottom="48dp" />
 
     <!-- Go Back Button -->
     <Button
         android:id="@+id/btn_go_back"
-        android:layout_width="280dp"
-        android:layout_height="56dp"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
         android:text="Go Back"
         android:textSize="16sp"
+        android:textStyle="bold"
         android:textColor="@color/white"
         android:background="@drawable/button_primary"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="12dp" />
 
     <!-- Open Omit Button -->
     <Button
         android:id="@+id/btn_open_omit"
-        android:layout_width="280dp"
-        android:layout_height="56dp"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
         android:text="Open Omit"
         android:textSize="16sp"
-        android:textColor="@color/colorPrimary"
+        android:textStyle="bold"
+        android:textColor="@color/dark_foreground"
         android:background="@drawable/button_outline" />
 
 </LinearLayout>

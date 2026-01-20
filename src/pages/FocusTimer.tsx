@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { storage, Task } from "@/lib/storage";
+import AppBlocker, { isCapacitor } from "@/lib/app-blocker";
 
 export default function FocusTimer() {
   const navigate = useNavigate();
@@ -12,6 +13,20 @@ export default function FocusTimer() {
   const [strictMode, setStrictMode] = useState(false);
   const [availableTasks, setAvailableTasks] = useState<Task[]>([]);
   const [showTaskSelector, setShowTaskSelector] = useState(false);
+
+  const finishSession = useCallback(async () => {
+    if (isCapacitor()) {
+      try {
+        await AppBlocker.stopMonitoring();
+        localStorage.setItem("android_monitoring", "false");
+      } catch (e) {
+        console.error("Failed to stop blocking", e);
+      }
+    }
+    storage.endFocusSession();
+    window.postMessage({ type: 'OMIT_SYNC_REQUEST', payload: { focusMode: false } }, '*');
+    navigate('/');
+  }, [navigate]);
 
   useEffect(() => {
     // Load strict mode setting
@@ -27,8 +42,7 @@ export default function FocusTimer() {
 
     const remaining = session.endTime - Date.now();
     if (remaining <= 0) {
-      storage.endFocusSession();
-      navigate('/');
+      finishSession();
       return;
     }
 
@@ -47,7 +61,7 @@ export default function FocusTimer() {
       setCurrentTask(priorityTask.title);
       setCurrentTaskId(priorityTask.id);
     }
-  }, [navigate]);
+  }, [navigate, finishSession]);
 
   useEffect(() => {
     if (isPaused) return;
@@ -68,8 +82,7 @@ export default function FocusTimer() {
 
       const remaining = currentSession.endTime - Date.now();
       if (remaining <= 0) {
-        storage.endFocusSession();
-        navigate('/');
+        finishSession();
         return;
       }
 
@@ -77,7 +90,7 @@ export default function FocusTimer() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPaused, navigate]);
+  }, [isPaused, navigate, finishSession]);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -91,10 +104,7 @@ export default function FocusTimer() {
       return;
     }
     
-    storage.endFocusSession();
-    // Sync to extension
-    window.postMessage({ type: 'OMIT_SYNC_REQUEST', payload: { focusMode: false } }, '*');
-    navigate('/');
+    finishSession();
   };
 
   const handleCompleteTask = () => {
