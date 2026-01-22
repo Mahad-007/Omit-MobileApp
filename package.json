@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.0.1",
-    "@capacitor/cli": "^2.5.0",
     "@capacitor/core": "^8.0.1",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
@@ -66,6 +65,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.0.1",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/chrome": "^0.1.32",

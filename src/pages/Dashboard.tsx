@@ -113,7 +113,7 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col min-h-screen pb-24">
       {/* Header Section */}
-      <header className="flex items-center bg-transparent pt-12 px-6 pb-8 justify-between">
+      <header className="flex items-center bg-transparent pt-12 px-6 pb-8 justify-between animate-fade-up">
         <div className="flex flex-col gap-1">
           <p className="text-primary font-semibold text-xs tracking-[0.2em] uppercase">
             Today • {dateStr}
@@ -125,7 +125,7 @@ export default function Dashboard() {
         <div className="flex size-12 items-center justify-end">
           <button 
             onClick={() => navigate('/settings')}
-            className="flex items-center justify-center rounded-full h-12 w-12 bg-card text-foreground hover:bg-primary/20 transition-colors border border-border"
+            className="flex items-center justify-center rounded-full h-12 w-12 bg-card text-foreground hover:bg-primary/20 transition-all border border-border hover-lift press-effect"
           >
             <span className="material-symbols-outlined">settings</span>
           </button>
@@ -133,7 +133,7 @@ export default function Dashboard() {
       </header>
 
       {/* Stats Overview */}
-      <section className="flex gap-4 px-6 mb-8">
+      <section className="flex gap-4 px-6 mb-8 animate-fade-up stagger-1" style={{ opacity: 0, animationFillMode: 'forwards' }}>
         <div className="flex-1 flex flex-col gap-2 rounded-xl p-5 border border-border bg-card/40 zen-card-shadow">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-sm">checklist</span>
@@ -151,7 +151,7 @@ export default function Dashboard() {
       </section>
 
       {/* Daily Time Limit Card */}
-      <section className="px-6 mb-8">
+      <section className="px-6 mb-8 animate-fade-up stagger-2" style={{ opacity: 0, animationFillMode: 'forwards' }}>
         <div className="flex flex-col gap-4 rounded-xl p-5 border border-border bg-card/40 zen-card-shadow">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -215,12 +215,12 @@ export default function Dashboard() {
       </section>
 
       {/* Primary Focus Card */}
-      <main className="px-6 mb-10">
-        <div className="flex flex-col items-stretch justify-start rounded-xl overflow-hidden bg-card zen-card-shadow">
+      <main className="px-6 mb-10 animate-fade-up stagger-3" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <div className="flex flex-col items-stretch justify-start rounded-xl overflow-hidden bg-card zen-card-shadow glow-border hover-lift">
           <div 
-            className="w-full h-48 bg-center bg-no-repeat bg-cover relative"
+            className="w-full h-48 bg-center bg-no-repeat bg-cover relative bg-aurora"
             style={{
-              backgroundImage: 'linear-gradient(135deg, hsl(200 35% 25%) 0%, hsl(208 30% 35%) 100%)'
+              backgroundImage: 'linear-gradient(135deg, hsl(200 35% 25%) 0%, hsl(280 40% 30%) 50%, hsl(208 30% 35%) 100%)'
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent"></div>
@@ -244,7 +244,7 @@ export default function Dashboard() {
               </div>
               <button 
                 onClick={() => navigate('/tasks')}
-                className="flex items-center justify-center rounded-lg h-9 px-4 bg-primary/20 text-primary border border-primary/30 text-sm font-bold"
+                className="flex items-center justify-center rounded-lg h-9 px-4 bg-primary/20 text-primary border border-primary/30 text-sm font-bold press-effect hover:bg-primary/30 transition-all"
               >
                 <span>Details</span>
               </button>
@@ -254,7 +254,7 @@ export default function Dashboard() {
       </main>
 
       {/* Progress Section */}
-      <section className="px-6 mb-12">
+      <section className="px-6 mb-12 animate-fade-up stagger-4" style={{ opacity: 0, animationFillMode: 'forwards' }}>
         <div className="flex flex-col gap-3 p-6 rounded-xl border border-border/50 bg-card/20">
           <div className="flex justify-between items-end">
             <p className="text-foreground text-sm font-medium">Daily Progress</p>
@@ -275,10 +275,10 @@ export default function Dashboard() {
       </section>
 
       {/* Centered Action Button */}
-      <section className="flex px-6 pb-20 justify-center">
+      <section className="flex px-6 pb-20 justify-center animate-fade-up stagger-5" style={{ opacity: 0, animationFillMode: 'forwards' }}>
         <button 
           onClick={handleStartFocus}
-          className="group flex min-w-[200px] items-center justify-center rounded-full h-16 px-8 bg-primary text-white gap-3 text-lg font-bold tracking-tight soft-glow active:scale-95 transition-all"
+          className="group flex min-w-[200px] items-center justify-center rounded-full h-16 px-8 bg-primary text-white gap-3 text-lg font-bold tracking-tight soft-glow press-effect hover:brightness-110 transition-all animate-glow-pulse"
         >
           <span className="material-symbols-outlined fill-current group-hover:scale-110 transition-transform">
             {focusModeActive ? 'timer' : 'play_arrow'}

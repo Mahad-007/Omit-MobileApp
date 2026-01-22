@@ -145,9 +145,12 @@ export default function FocusTimer() {
   const strokeDashoffset = totalTime > 0 ? circumference * (timeRemaining / totalTime) : circumference;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between font-display text-foreground">
+    <div className="min-h-screen flex flex-col items-center justify-between font-display text-foreground relative overflow-hidden">
+      {/* Animated Aurora Background */}
+      <div className="absolute inset-0 bg-aurora opacity-30 pointer-events-none" />
+      
       {/* Subtle Session Indicator at the Top */}
-      <header className="w-full pt-16 px-8 flex flex-col items-center gap-2">
+      <header className="w-full pt-16 px-8 flex flex-col items-center gap-2 animate-fade-up relative z-10">
         <span className="text-[10px] uppercase tracking-[0.4em] text-primary font-bold opacity-80">
           Current Session
         </span>
@@ -155,9 +158,9 @@ export default function FocusTimer() {
       </header>
 
       {/* Central Immersive Timer */}
-      <main className="relative flex flex-col items-center justify-center flex-grow w-full">
-        {/* Circular Progress SVG Container */}
-        <div className="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center">
+      <main className="relative flex flex-col items-center justify-center flex-grow w-full z-10">
+        {/* Circular Progress SVG Container - with breathing effect */}
+        <div className="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center animate-breathe">
           {/* Background Ring */}
           <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
             <circle 
