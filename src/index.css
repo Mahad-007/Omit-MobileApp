@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
+/* Distinctive Typography: Sora (geometric display) + DM Sans (refined body) */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
 @tailwind base;
@@ -165,9 +167,14 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Manrope', sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Headings use Sora for distinctive display */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', system-ui, sans-serif;
   }
   
   /* Material Symbols defaults */
@@ -309,15 +316,130 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Micro-animation utilities */
+/* ============================================
+   PREMIUM ANIMATION SYSTEM - Zen Focus
+   ============================================ */
+
+/* Page entrance animations */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Timer breathing animation */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+}
+
+/* Aurora background effect */
+@keyframes aurora {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Subtle pulse for idle states */
 @keyframes subtle-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.85; }
 }
 
+/* Glow pulse for active elements */
 @keyframes glow-pulse {
   0%, 100% { box-shadow: var(--shadow-glow); }
-  50% { box-shadow: 0 0 30px hsl(200 35% 38% / 0.4); }
+  50% { box-shadow: 0 0 35px hsl(var(--primary) / 0.5); }
+}
+
+/* Scale bounce for interactive feedback */
+@keyframes scaleBounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* Bar chart grow animation */
+@keyframes growUp {
+  from {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+  to {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+}
+
+/* Gradient shift for backgrounds */
+@keyframes gradientShift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* Animation utility classes */
+.animate-fade-up {
+  animation: fadeSlideUp 0.5s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeSlideIn 0.4s ease-out forwards;
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.animate-aurora {
+  background-size: 200% 200%;
+  animation: aurora 15s ease infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted-foreground) / 0.1) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
 
 .animate-subtle-pulse {
@@ -326,6 +448,92 @@ body {
 
 .animate-glow-pulse {
   animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-scale-bounce {
+  animation: scaleBounce 0.3s ease-out;
+}
+
+.animate-grow-up {
+  animation: growUp 0.6s ease-out forwards;
+}
+
+/* Staggered entrance delays for lists */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+
+/* Enhanced glassmorphism */
+.glass-premium {
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid hsl(var(--border) / 0.3);
+}
+
+/* Aurora gradient background */
+.bg-aurora {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.15) 0%,
+    hsl(280 60% 50% / 0.1) 25%,
+    hsl(var(--primary) / 0.1) 50%,
+    hsl(190 80% 50% / 0.1) 75%,
+    hsl(var(--primary) / 0.15) 100%
+  );
+  background-size: 400% 400%;
+  animation: aurora 20s ease infinite;
+}
+
+/* Gradient border glow effect */
+.glow-border {
+  position: relative;
+}
+
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary)) 0%,
+    hsl(280 60% 60%) 50%,
+    hsl(190 80% 50%) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.glow-border:hover::before {
+  opacity: 1;
+}
+
+/* Interactive button press effect */
+.press-effect {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.press-effect:active {
+  transform: scale(0.97);
+}
+
+/* Smooth hover lift */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevated);
 }
 
 /* Mobile app container */

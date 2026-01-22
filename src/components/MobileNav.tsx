@@ -45,7 +45,7 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-xl border-t border-border/30 safe-area-bottom">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass-premium safe-area-bottom">
         <div className="flex items-center justify-between px-8 py-3">
           {/* Left nav items */}
           {navigation.slice(0, 2).map((item) => (
@@ -55,7 +55,7 @@ export function MobileNav() {
               end={item.href === "/"}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-1 transition-all duration-200 min-w-[48px]",
+                  "flex flex-col items-center gap-1 transition-all duration-300 min-w-[48px] relative",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -64,10 +64,15 @@ export function MobileNav() {
             >
               {({ isActive }) => (
                 <>
-                  <item.icon className={cn(
-                    "w-5 h-5 transition-transform duration-200",
-                    isActive && "scale-110"
-                  )} />
+                  <div className={cn(
+                    "p-1.5 rounded-lg transition-all duration-300",
+                    isActive && "bg-primary/15 shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
+                  )}>
+                    <item.icon className={cn(
+                      "w-5 h-5 transition-transform duration-200",
+                      isActive && "scale-110"
+                    )} />
+                  </div>
                   <span className="text-[10px] font-bold uppercase tracking-tighter">{item.name}</span>
                 </>
               )}
@@ -78,7 +83,7 @@ export function MobileNav() {
           <div className="relative -top-6">
             <button
               onClick={() => setIsQuickAddOpen(true)}
-              className="flex size-14 items-center justify-center rounded-full bg-card border border-border text-foreground shadow-zen hover:scale-105 transition-transform"
+              className="flex size-14 items-center justify-center rounded-full bg-primary text-white shadow-xl hover:scale-105 press-effect transition-all animate-subtle-pulse hover:animate-none"
             >
               <Plus className="w-6 h-6" />
             </button>
@@ -91,7 +96,7 @@ export function MobileNav() {
               to={item.href}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-1 transition-all duration-200 min-w-[48px]",
+                  "flex flex-col items-center gap-1 transition-all duration-300 min-w-[48px] relative",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -100,10 +105,15 @@ export function MobileNav() {
             >
               {({ isActive }) => (
                 <>
-                  <item.icon className={cn(
-                    "w-5 h-5 transition-transform duration-200",
-                    isActive && "scale-110"
-                  )} />
+                  <div className={cn(
+                    "p-1.5 rounded-lg transition-all duration-300",
+                    isActive && "bg-primary/15 shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
+                  )}>
+                    <item.icon className={cn(
+                      "w-5 h-5 transition-transform duration-200",
+                      isActive && "scale-110"
+                    )} />
+                  </div>
                   <span className="text-[10px] font-bold uppercase tracking-tighter">{item.name}</span>
                 </>
               )}
