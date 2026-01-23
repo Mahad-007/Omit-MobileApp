@@ -29,11 +29,9 @@ export default function FocusTimer() {
   }, [navigate]);
 
   useEffect(() => {
-    // Load strict mode setting
     const settings = storage.getSettings();
     setStrictMode(settings.strictMode);
 
-    // Check for active session
     const session = storage.getActiveSession();
     if (!session) {
       navigate('/');
@@ -49,12 +47,10 @@ export default function FocusTimer() {
     setTimeRemaining(Math.floor(remaining / 1000));
     setTotalTime(session.duration * 60);
 
-    // Get all tasks and set available (incomplete) tasks
     const tasks = storage.getTasks();
     const incompleteTasks = tasks.filter(t => !t.completed);
     setAvailableTasks(incompleteTasks);
     
-    // Get priority task as default
     const priorityTask = incompleteTasks.find(t => t.priority === 'high') || 
                          incompleteTasks[0];
     if (priorityTask) {
@@ -66,7 +62,6 @@ export default function FocusTimer() {
   useEffect(() => {
     if (isPaused) return;
 
-    // Initial check for valid session
     const session = storage.getActiveSession();
     if (!session) {
       navigate('/');
@@ -99,24 +94,18 @@ export default function FocusTimer() {
   }, []);
 
   const handleEndSession = () => {
-    // In strict mode, prevent ending the session early
-    if (strictMode) {
-      return;
-    }
-    
+    if (strictMode) return;
     finishSession();
   };
 
   const handleCompleteTask = () => {
     if (currentTaskId) {
-      // Get the full task and update it
       const tasks = storage.getTasks();
       const taskToComplete = tasks.find(t => t.id === currentTaskId);
       if (taskToComplete) {
         storage.saveTask({ ...taskToComplete, completed: true });
       }
       
-      // Find next task from available incomplete tasks
       const updatedTasks = storage.getTasks();
       const incompleteTasks = updatedTasks.filter(t => !t.completed);
       setAvailableTasks(incompleteTasks);
@@ -140,29 +129,43 @@ export default function FocusTimer() {
   };
 
   const progressPercent = totalTime > 0 ? Math.round(((totalTime - timeRemaining) / totalTime) * 100) : 0;
-  const radius = 45; // Radius in viewBox units
+  const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = totalTime > 0 ? circumference * (timeRemaining / totalTime) : circumference;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between font-display text-foreground relative overflow-hidden">
-      {/* Animated Aurora Background */}
-      <div className="absolute inset-0 bg-aurora opacity-30 pointer-events-none" />
+    <div className="min-h-screen flex flex-col items-center justify-between text-foreground relative overflow-hidden">
+      {/* Deep Atmospheric Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-black/40" />
+      <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-subtle-pulse" />
       
-      {/* Subtle Session Indicator at the Top */}
-      <header className="w-full pt-16 px-8 flex flex-col items-center gap-2 animate-fade-up relative z-10">
-        <span className="text-[10px] uppercase tracking-[0.4em] text-primary font-bold opacity-80">
-          Current Session
-        </span>
-        <h2 className="text-foreground/90 text-sm font-medium tracking-tight">DEEP WORK</h2>
+      {/* Noise overlay for texture */}
+      <div className="absolute inset-0 noise-overlay pointer-events-none" />
+
+      {/* Session Header */}
+      <header className="w-full pt-16 px-8 flex flex-col items-center gap-3 animate-fade-up relative z-10">
+        <div className="flex items-center gap-2">
+          <div className="size-2 rounded-full bg-primary animate-subtle-pulse" />
+          <span className="text-[10px] uppercase tracking-[0.4em] text-primary/80 font-bold">
+            Focus Session
+          </span>
+        </div>
+        <h2 className="text-foreground/60 text-sm font-medium tracking-wide uppercase">
+          Deep Work Mode
+        </h2>
       </header>
 
-      {/* Central Immersive Timer */}
-      <main className="relative flex flex-col items-center justify-center flex-grow w-full z-10">
-        {/* Circular Progress SVG Container - with breathing effect */}
-        <div className="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center animate-breathe">
-          {/* Background Ring */}
+      {/* Central Timer Display */}
+      <main className="relative flex flex-col items-center justify-center flex-grow w-full z-10 -mt-8">
+        {/* Timer Container */}
+        <div className="relative w-80 h-80 flex items-center justify-center">
+          {/* Outer glow ring */}
+          <div className="absolute inset-0 rounded-full bg-primary/5 animate-subtle-pulse" />
+          
+          {/* SVG Progress Ring */}
           <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+            {/* Background track */}
             <circle 
               className="text-foreground/5" 
               cx="50" 
@@ -170,60 +173,78 @@ export default function FocusTimer() {
               fill="transparent" 
               r={radius} 
               stroke="currentColor" 
-              strokeWidth="1.5"
-            ></circle>
-            {/* Progress Ring */}
+              strokeWidth="1"
+            />
+            {/* Progress ring */}
             <circle 
-              className="text-primary timer-ring" 
               cx="50" 
               cy="50" 
               fill="transparent" 
               r={radius} 
-              stroke="currentColor" 
+              stroke="url(#timerGradient)" 
               strokeDasharray={circumference} 
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round" 
               strokeWidth="2"
+              className="timer-ring"
               style={{ 
                 willChange: 'stroke-dashoffset',
-                transition: 'stroke-dashoffset 1s linear'
+                transition: 'stroke-dashoffset 1s linear',
+                filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.5))'
               }}
-            ></circle>
+            />
+            {/* Gradient definition */}
+            <defs>
+              <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="hsl(258, 85%, 65%)" />
+                <stop offset="100%" stopColor="hsl(280, 80%, 58%)" />
+              </linearGradient>
+            </defs>
           </svg>
-          {/* Digital Clock Display */}
-          <div className="flex flex-col items-center text-center">
-            <span className="text-7xl font-extralight tracking-tighter text-foreground tabular-nums">
+          
+          {/* Time Display */}
+          <div className="flex flex-col items-center text-center animate-breathe">
+            <span className="focus-timer-display text-7xl tracking-tighter text-foreground tabular-nums">
               {formatTime(timeRemaining)}
+            </span>
+            <span className="text-muted-foreground/60 text-xs font-medium uppercase tracking-widest mt-2">
+              remaining
             </span>
           </div>
         </div>
 
-        {/* Task Label Below Timer */}
-        <div className="mt-12 flex flex-col items-center gap-3 relative">
+        {/* Current Task Pill */}
+        <div className="mt-10 flex flex-col items-center gap-3 relative">
           <div className="flex items-center gap-2">
             <button
               onClick={handleCompleteTask}
               disabled={!currentTaskId}
-              className="flex items-center gap-2 px-4 py-2 bg-foreground/5 rounded-full backdrop-blur-sm border border-foreground/10 transition-all hover:bg-foreground/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-3 px-5 py-3 bg-card/60 rounded-2xl backdrop-blur-md border border-border/30 transition-all hover:bg-card/80 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group"
             >
-              <span className="material-symbols-outlined text-[18px] text-primary">
-                {currentTaskId ? 'check_circle' : 'edit_note'}
-              </span>
-              <p className="text-foreground/60 text-sm font-light leading-normal">
-                {currentTaskId ? (
-                  <>Tap to complete: <span className="text-foreground/90 font-normal">{currentTask}</span></>
-                ) : (
-                  <span className="text-foreground/90 font-normal">{currentTask}</span>
-                )}
-              </p>
+              <div className={`size-6 rounded-lg flex items-center justify-center transition-colors ${
+                currentTaskId ? 'bg-primary/20 group-hover:bg-primary/30' : 'bg-muted'
+              }`}>
+                <span className="material-symbols-outlined text-sm text-primary">
+                  {currentTaskId ? 'check_circle' : 'edit_note'}
+                </span>
+              </div>
+              <div className="text-left">
+                <p className="text-foreground/50 text-[10px] uppercase tracking-wider font-medium">
+                  {currentTaskId ? 'Tap to complete' : 'Current task'}
+                </p>
+                <p className="text-foreground text-sm font-semibold max-w-[200px] truncate">
+                  {currentTask}
+                </p>
+              </div>
             </button>
+            
             {availableTasks.length > 1 && (
               <button
                 onClick={() => setShowTaskSelector(!showTaskSelector)}
-                className="p-2 bg-foreground/5 rounded-full backdrop-blur-sm border border-foreground/10 transition-all hover:bg-foreground/10 active:scale-95"
-                title="Change task"
+                className="p-3 bg-card/60 rounded-xl backdrop-blur-md border border-border/30 transition-all hover:bg-card/80 active:scale-95"
+                title="Switch task"
               >
-                <span className="material-symbols-outlined text-[18px] text-foreground/60">
+                <span className="material-symbols-outlined text-lg text-foreground/60">
                   swap_horiz
                 </span>
               </button>
@@ -232,27 +253,27 @@ export default function FocusTimer() {
           
           {/* Task Selector Dropdown */}
           {showTaskSelector && availableTasks.length > 0 && (
-            <div className="absolute top-full mt-2 w-72 max-h-60 overflow-y-auto bg-background/95 backdrop-blur-md rounded-xl border border-foreground/10 shadow-xl z-50">
+            <div className="absolute top-full mt-2 w-72 max-h-60 overflow-y-auto bg-card/95 backdrop-blur-xl rounded-2xl border border-border/40 shadow-xl z-50 animate-scale-in">
               <div className="p-2">
-                <p className="text-xs text-foreground/50 uppercase tracking-wider px-3 py-2">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold px-3 py-2">
                   Select a task
                 </p>
                 {availableTasks.map(task => (
                   <button
                     key={task.id}
                     onClick={() => handleSelectTask(task)}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center gap-2 ${
+                    className={`w-full text-left px-3 py-3 rounded-xl transition-all flex items-center gap-3 ${
                       task.id === currentTaskId 
-                        ? 'bg-primary/20 text-primary' 
-                        : 'hover:bg-foreground/5 text-foreground/80'
+                        ? 'bg-primary/15 text-primary' 
+                        : 'hover:bg-accent text-foreground/80'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[16px]">
+                    <span className="material-symbols-outlined text-base">
                       {task.priority === 'high' ? 'priority_high' : 'task_alt'}
                     </span>
-                    <span className="text-sm truncate">{task.title}</span>
+                    <span className="text-sm font-medium truncate flex-1">{task.title}</span>
                     {task.priority === 'high' && (
-                      <span className="ml-auto text-xs px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded">
+                      <span className="text-[10px] px-2 py-0.5 bg-highlight/20 text-highlight rounded-full font-bold">
                         High
                       </span>
                     )}
@@ -264,34 +285,37 @@ export default function FocusTimer() {
         </div>
       </main>
 
-      {/* Minimal Bottom Controls */}
-      <footer className="w-full max-w-[480px] px-8 pb-12 flex flex-col gap-6">
+      {/* Bottom Controls */}
+      <footer className="w-full max-w-[400px] px-6 pb-10 flex flex-col gap-5 relative z-10">
         {/* Progress Bar */}
-        <div className="flex flex-col gap-3">
-          <div className="flex gap-6 justify-between items-end">
-            <p className="text-foreground/40 text-xs font-medium uppercase tracking-widest">Elapsed</p>
-            <p className="text-foreground/80 text-sm font-medium">{progressPercent}%</p>
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <p className="text-foreground/40 text-[10px] font-semibold uppercase tracking-widest">Progress</p>
+            <p className="text-foreground/70 text-sm font-bold">{progressPercent}%</p>
           </div>
-          <div className="h-[2px] w-full bg-foreground/10 rounded-full overflow-hidden">
+          <div className="h-1 w-full bg-foreground/10 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-primary rounded-full transition-all duration-1000" 
-              style={{ width: `${progressPercent}%` }}
-            ></div>
+              className="h-full rounded-full transition-all duration-1000 ease-out" 
+              style={{ 
+                width: `${progressPercent}%`,
+                background: 'var(--gradient-primary)'
+              }}
+            />
           </div>
         </div>
 
-        {/* Button Actions */}
-        <div className="flex gap-4 items-center">
+        {/* Action Buttons */}
+        <div className="flex gap-3 items-center">
           <button 
             onClick={() => !strictMode && setIsPaused(!isPaused)}
             disabled={strictMode}
-            className={`flex-1 h-14 flex items-center justify-center gap-2 rounded-xl font-semibold text-base transition-all ${
+            className={`flex-1 h-14 flex items-center justify-center gap-2 rounded-2xl font-semibold text-sm transition-all ${
               strictMode
-                ? 'bg-muted text-muted-foreground cursor-not-allowed border border-foreground/10'
-                : 'bg-foreground/5 border border-foreground/10 text-foreground active:scale-95 hover:bg-foreground/10'
+                ? 'bg-muted/50 text-muted-foreground cursor-not-allowed border border-border/30'
+                : 'bg-card/80 border border-border/40 text-foreground active:scale-[0.98] hover:bg-card backdrop-blur-sm'
             }`}
           >
-            <span className="material-symbols-outlined text-xl">
+            <span className="material-symbols-outlined text-lg">
               {strictMode ? 'lock' : isPaused ? 'play_arrow' : 'pause'}
             </span>
             <span>{strictMode ? 'Locked' : isPaused ? 'Resume' : 'Pause'}</span>
@@ -299,23 +323,21 @@ export default function FocusTimer() {
           <button 
             onClick={handleEndSession}
             disabled={strictMode}
-            className={`flex-1 h-14 flex items-center justify-center gap-2 rounded-xl font-semibold text-base transition-all ${
+            className={`flex-1 h-14 flex items-center justify-center gap-2 rounded-2xl font-semibold text-sm transition-all ${
               strictMode 
-                ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                : 'bg-primary text-white shadow-xl shadow-primary/20 active:scale-95 hover:brightness-110'
+                ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' 
+                : 'text-white active:scale-[0.98]'
             }`}
+            style={!strictMode ? { background: 'var(--gradient-primary)', boxShadow: 'var(--shadow-glow)' } : {}}
           >
-            <span className="material-symbols-outlined text-xl">{strictMode ? 'lock' : 'stop'}</span>
+            <span className="material-symbols-outlined text-lg">{strictMode ? 'lock' : 'stop'}</span>
             <span>{strictMode ? 'Strict Mode' : 'End Session'}</span>
           </button>
         </div>
-
-        {/* Home Indicator Safe Area Space */}
-        <div className="h-2"></div>
       </footer>
 
-      {/* Distraction Free Overlay */}
-      <div className="fixed inset-0 pointer-events-none bg-gradient-to-b from-transparent via-transparent to-background/40"></div>
+      {/* Bottom vignette overlay */}
+      <div className="fixed inset-0 pointer-events-none bg-gradient-to-t from-background/60 via-transparent to-transparent" />
     </div>
   );
 }
