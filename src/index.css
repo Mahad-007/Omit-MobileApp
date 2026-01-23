@@ -783,3 +783,85 @@
 .priority-dot.low {
   @apply bg-muted-foreground;
 }
+
+/* ============================================
+   FOCUS-FIRST UI ENHANCEMENTS
+   ============================================ */
+
+/* Focus Status Indicators */
+.focus-active-indicator {
+  @apply relative;
+}
+
+.focus-active-indicator::after {
+  content: '';
+  @apply absolute -top-1 -right-1 size-3 rounded-full;
+  background-color: hsl(var(--highlight));
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Shield/Protection visual */
+.shield-glow {
+  filter: drop-shadow(0 0 20px hsl(var(--primary) / 0.4));
+}
+
+.shield-glow-active {
+  filter: drop-shadow(0 0 30px hsl(var(--highlight) / 0.5));
+}
+
+/* Blocked app badge */
+.blocked-badge {
+  @apply absolute -top-1 -right-1 size-5 rounded-full bg-destructive text-white text-[10px] font-bold flex items-center justify-center;
+}
+
+/* Focus hero card gradient animation */
+.focus-hero-gradient {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.15) 0%,
+    hsl(280 80% 60% / 0.1) 50%,
+    hsl(var(--primary) / 0.15) 100%
+  );
+  background-size: 200% 200%;
+  animation: aurora 15s ease infinite;
+}
+
+/* Protection pulse ring */
+@keyframes protection-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px hsl(var(--primary) / 0);
+  }
+}
+
+.protection-pulse {
+  animation: protection-pulse 2.5s ease-in-out infinite;
+}
+
+/* Active session ring */
+@keyframes session-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--highlight) / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 8px hsl(var(--highlight) / 0);
+  }
+}
+
+.session-ring {
+  animation: session-ring 2s ease-in-out infinite;
+}
+
+/* App icon blocked overlay */
+.app-blocked-overlay {
+  @apply relative;
+}
+
+.app-blocked-overlay::after {
+  content: '';
+  @apply absolute inset-0 rounded-xl bg-primary/20;
+  backdrop-filter: blur(1px);
+}
+
