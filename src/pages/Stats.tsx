@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { storage, Task, DailyStats } from "@/lib/storage";
+import { storage, DailyStats } from "@/lib/storage";
 import CalendarModal from "@/components/CalendarModal";
 
 interface WeeklyData {
@@ -28,7 +28,6 @@ export default function Stats() {
 
   useEffect(() => {
     const loadData = () => {
-      // Get weekly stats
       const weeklyStats = storage.getWeeklyStats();
       const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
       
@@ -39,54 +38,42 @@ export default function Stats() {
       }));
       setWeeklyData(formattedData);
       
-      // Total weekly focus hours
       const totalWeeklyHours = storage.getWeeklyFocusHours();
       setWeeklyFocusHours(totalWeeklyHours);
       
-      // Calculate week-over-week change for focus hours
       const previousWeekHours = storage.getPreviousWeekFocusHours();
       const hourChange = storage.calculatePercentageChange(totalWeeklyHours, previousWeekHours);
       setFocusHoursChange(hourChange);
       
-      // Focus score (based on 40h weekly goal)
       const score = Math.min(100, Math.round((totalWeeklyHours / 40) * 100));
       setFocusScore(score);
       
-      // Calculate focus score change based on weekly comparison
       const previousScore = Math.min(100, Math.round((previousWeekHours / 40) * 100));
       const scoreChange = storage.calculatePercentageChange(score, previousScore);
       setFocusScoreChange(scoreChange);
       
-      // Tasks completed this week
       const weeklyTasks = storage.getWeeklyTasksCompleted();
       setTasksCompleted(weeklyTasks);
       
-      // Tasks change
       const previousTasks = storage.getPreviousWeekTasksCompleted();
       const taskChange = storage.calculatePercentageChange(weeklyTasks, previousTasks);
       setTasksChange(taskChange);
       
-      // Best productive day
       const best = storage.getBestProductiveDay();
       setBestDay(best);
       
-      // Work breakdown (approximate: 60% deep work, 40% shallow)
-      // In a real app, this would track session intensity
       setDeepWorkHours(totalWeeklyHours * 0.6);
       setShallowWorkHours(totalWeeklyHours * 0.4);
       
-      // Weekly wasted hours
       const weeklyWasted = weeklyStats.reduce((sum, s) => sum + s.wastedHours, 0);
       setWeeklyWastedHours(weeklyWasted);
       
-      // Today's stats
       setTodaySavedHours(storage.getSavedTime());
       setTodayWastedHours(storage.getWastedTime());
     };
     
     loadData();
     
-    // Subscribe to changes for real-time updates
     const unsubscribeStats = storage.onChange('stats', loadData);
     const unsubscribeTasks = storage.onChange('tasks', loadData);
     return () => {
@@ -96,11 +83,9 @@ export default function Stats() {
   }, []);
 
   const maxHours = Math.max(...weeklyData.map(d => d.hours), 1);
-  const deepWorkGoal = 20; // 20 hours weekly goal
+  const deepWorkGoal = 20;
   const deepWorkProgress = Math.min(100, (deepWorkHours / deepWorkGoal) * 100);
-  const shallowWorkAvg = shallowWorkHours / 7;
 
-  // Format hours and minutes
   const formatTime = (hours: number) => {
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
@@ -109,58 +94,69 @@ export default function Stats() {
 
   return (
     <div className="min-h-screen flex flex-col relative pb-24">
-      {/* Header Section */}
-      <header className="flex items-center justify-between px-6 pt-12 pb-6">
-        <div className="size-10 flex items-center justify-center rounded-full bg-card border border-border">
-          <span className="material-symbols-outlined text-muted-foreground">person</span>
-        </div>
-        <h2 className="text-lg font-bold tracking-tight">Insights</h2>
+      {/* Atmospheric backgrounds */}
+      <div className="absolute top-0 right-0 w-80 h-80 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-40 left-0 w-64 h-64 bg-highlight/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 pt-14 pb-6 relative z-10">
+        <button 
+          onClick={() => navigate('/')}
+          className="size-11 flex items-center justify-center rounded-2xl bg-card/80 border border-border/50 transition-colors hover:bg-accent"
+        >
+          <span className="material-symbols-outlined text-muted-foreground">arrow_back_ios_new</span>
+        </button>
+        <h1 className="text-lg font-bold tracking-tight">Insights</h1>
         <button 
           onClick={() => setIsCalendarOpen(true)}
-          className="size-10 flex items-center justify-center rounded-full bg-card border border-border transition-colors hover:bg-muted"
+          className="size-11 flex items-center justify-center rounded-2xl bg-card/80 border border-border/50 transition-colors hover:bg-accent"
         >
           <span className="material-symbols-outlined text-muted-foreground">calendar_today</span>
         </button>
       </header>
 
-      {/* Focus Trend Chart Section */}
-      <section className="px-6 mb-8">
-        <div className="bg-card/40 rounded-xl p-6 border border-border shadow-sm">
-          <div className="flex justify-between items-end mb-6">
+      {/* Weekly Focus Chart */}
+      <section className="px-6 mb-6 animate-fade-up">
+        <div className="bg-card/60 rounded-2xl p-6 border border-border/50 backdrop-blur-sm zen-card-shadow">
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Focus Hours</p>
-              <h1 className="text-4xl font-bold tracking-tight">{weeklyFocusHours.toFixed(1)}h</h1>
+              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-1">Focus Hours</p>
+              <h2 className="text-4xl font-bold tracking-tight">{weeklyFocusHours.toFixed(1)}<span className="text-lg text-muted-foreground font-medium ml-1">hrs</span></h2>
             </div>
-            <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+            <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 ${
               focusHoursChange >= 0 
-                ? 'bg-primary/20 text-primary' 
-                : 'bg-red-500/20 text-red-400'
+                ? 'bg-emerald-500/15 text-emerald-500' 
+                : 'bg-red-500/15 text-red-400'
             }`}>
+              <span className="material-symbols-outlined text-sm">
+                {focusHoursChange >= 0 ? 'trending_up' : 'trending_down'}
+              </span>
               {focusHoursChange >= 0 ? '+' : ''}{focusHoursChange}%
             </div>
           </div>
           
-          {/* Simple Bar Chart */}
-          <div className="relative h-48 w-full mt-8">
-            <div className="flex items-end justify-between h-40 gap-2">
-              {weeklyData.map((data) => {
-                const barHeight = maxHours > 0 ? Math.max((data.hours / maxHours) * 160, 8) : 8;
+          {/* Bar Chart */}
+          <div className="relative h-40 mt-8">
+            <div className="flex items-end justify-between h-32 gap-2">
+              {weeklyData.map((data, index) => {
+                const barHeight = maxHours > 0 ? Math.max((data.hours / maxHours) * 100, 4) : 4;
+                const isToday = index === new Date().getDay() - 1 || (new Date().getDay() === 0 && index === 6);
                 return (
-                  <div key={data.day} className="flex-1 flex flex-col justify-end h-full">
+                  <div key={data.day} className="flex-1 flex flex-col items-center justify-end h-full gap-2">
                     <div 
-                      className="w-full bg-primary/30 rounded-t-sm transition-all hover:bg-primary/50 relative"
-                      style={{ height: `${barHeight}px` }}
-                    >
-                      <div 
-                        className="w-full bg-primary rounded-t-sm absolute bottom-0"
-                        style={{ height: data.hours > 0 ? '60%' : '0%' }}
-                      ></div>
-                    </div>
+                      className={`w-full rounded-lg transition-all duration-700 ease-out animate-grow-up ${
+                        isToday ? 'bg-gradient-to-t from-primary to-purple-500' : 'bg-primary/30'
+                      }`}
+                      style={{ 
+                        height: `${barHeight}%`,
+                        animationDelay: `${index * 0.08}s`
+                      }}
+                    />
                   </div>
                 );
               })}
             </div>
-            <div className="flex justify-between mt-4">
+            <div className="flex justify-between mt-3">
               {weeklyData.map((data) => (
                 <span key={data.day} className="text-[10px] font-bold text-muted-foreground/60 flex-1 text-center">
                   {data.day}
@@ -171,30 +167,30 @@ export default function Stats() {
         </div>
       </section>
 
-      {/* Time Saved vs Wasted Section */}
-      <section className="px-6 mb-8">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-emerald-500/10 border border-emerald-500/20 p-5 rounded-xl flex flex-col gap-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-emerald-400 text-lg">schedule</span>
-              <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Time Saved</p>
+      {/* Time Saved vs Wasted */}
+      <section className="px-6 mb-6 animate-fade-up stagger-1" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="stat-card-positive p-5 rounded-2xl">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="size-8 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                <span className="material-symbols-outlined text-emerald-400 text-lg">schedule</span>
+              </div>
+              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Time Saved</p>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-emerald-400">{formatTime(weeklyFocusHours)}</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground/80 leading-snug mt-1">
+            <p className="text-2xl font-bold text-emerald-400">{formatTime(weeklyFocusHours)}</p>
+            <p className="text-[11px] text-muted-foreground/70 mt-1">
               Today: {formatTime(todaySavedHours)}
             </p>
           </div>
-          <div className="bg-red-500/10 border border-red-500/20 p-5 rounded-xl flex flex-col gap-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-red-400 text-lg">hourglass_empty</span>
-              <p className="text-xs font-semibold text-red-400 uppercase tracking-wider">Time Wasted</p>
+          <div className="stat-card-negative p-5 rounded-2xl">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="size-8 rounded-xl bg-red-500/20 flex items-center justify-center">
+                <span className="material-symbols-outlined text-red-400 text-lg">hourglass_empty</span>
+              </div>
+              <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Time Wasted</p>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-red-400">{formatTime(weeklyWastedHours)}</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground/80 leading-snug mt-1">
+            <p className="text-2xl font-bold text-red-400">{formatTime(weeklyWastedHours)}</p>
+            <p className="text-[11px] text-muted-foreground/70 mt-1">
               Today: {formatTime(todayWastedHours)}
             </p>
           </div>
@@ -202,94 +198,89 @@ export default function Stats() {
       </section>
 
       {/* Stats Grid */}
-      <section className="px-6 grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-card p-5 rounded-xl border border-border flex flex-col gap-1">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Focus Score</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold">{focusScore}</span>
+      <section className="px-6 grid grid-cols-2 gap-3 mb-6 animate-fade-up stagger-2" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <div className="bg-card/60 p-5 rounded-2xl border border-border/50 backdrop-blur-sm">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Focus Score</p>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-3xl font-bold gradient-text">{focusScore}</span>
             <span className={`text-[10px] font-bold ${focusScoreChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {focusScoreChange >= 0 ? '+' : ''}{focusScoreChange}%
             </span>
           </div>
-          <p className="text-[11px] text-muted-foreground/80 leading-snug mt-2">
-            {focusScoreChange >= 0 ? `${Math.abs(focusScoreChange)}% higher than last week` : `${Math.abs(focusScoreChange)}% lower than last week`}
+          <p className="text-[11px] text-muted-foreground/70 mt-2">
+            {focusScoreChange >= 0 ? 'Better than last week' : 'Lower than last week'}
           </p>
         </div>
-        <div className="bg-card p-5 rounded-xl border border-border flex flex-col gap-1">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tasks Done</p>
-          <div className="flex items-baseline gap-2">
+        <div className="bg-card/60 p-5 rounded-2xl border border-border/50 backdrop-blur-sm">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Tasks Done</p>
+          <div className="flex items-baseline gap-2 mt-1">
             <span className="text-3xl font-bold">{tasksCompleted}</span>
             <span className={`text-[10px] font-bold ${tasksChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {tasksChange >= 0 ? '+' : ''}{tasksChange}%
             </span>
           </div>
-          <p className="text-[11px] text-muted-foreground/80 leading-snug mt-2">
-            {tasksChange >= 0 ? 'Consistent progress this week' : 'Less tasks than last week'}
+          <p className="text-[11px] text-muted-foreground/70 mt-2">
+            {tasksChange >= 0 ? 'Consistent progress' : 'Less than last week'}
           </p>
         </div>
       </section>
 
-      {/* Breakdown Section */}
-      <section className="px-6 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold">Weekly Breakdown</h3>
-          <span className="material-symbols-outlined text-muted-foreground text-sm">more_horiz</span>
+      {/* Deep Work Breakdown */}
+      <section className="px-6 mb-6 animate-fade-up stagger-3" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <div className="bg-card/60 rounded-2xl p-5 border border-border/50 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold">Weekly Breakdown</h3>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium">Deep Work</span>
+                <span className="text-sm font-bold text-primary">{formatTime(deepWorkHours)}</span>
+              </div>
+              <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                <div 
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${deepWorkProgress}%`, background: 'var(--gradient-primary)' }}
+                />
+              </div>
+              <div className="flex justify-between mt-2">
+                <p className="text-[10px] text-muted-foreground">
+                  {bestDay ? `Best: ${bestDay.day} (${bestDay.hours.toFixed(1)}h)` : 'Track more sessions'}
+                </p>
+                <p className="text-[10px] text-muted-foreground">Goal: {deepWorkGoal}h</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="space-y-4">
-          <div className="bg-card/30 rounded-lg p-4 border border-border">
-            <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium">Deep Work</span>
-              <span className="text-sm font-bold text-primary">{formatTime(deepWorkHours)}</span>
+      </section>
+
+      {/* Pro Insight */}
+      <section className="px-6 mb-6 animate-fade-up stagger-4" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <div className="relative rounded-2xl p-5 overflow-hidden gradient-border">
+          <div className="absolute inset-0 bg-primary/5" />
+          <div className="relative flex gap-4 items-start">
+            <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>lightbulb</span>
             </div>
-            <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-              <div className="bg-primary h-full rounded-full" style={{ width: `${deepWorkProgress}%` }}></div>
-            </div>
-            <div className="flex justify-between mt-2">
-              <p className="text-[10px] text-muted-foreground italic">
-                {bestDay ? `Best day: ${bestDay.day} (${bestDay.hours.toFixed(1)}h)` : 'No sessions yet'}
+            <div>
+              <p className="text-xs font-bold text-foreground mb-1">Pro Insight</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {bestDay ? (
+                  <>
+                    You're most productive on <span className="text-primary font-semibold">{bestDay.day} mornings</span>. 
+                    Schedule deep work between 8-11 AM for maximum focus.
+                  </>
+                ) : (
+                  <>
+                    Start tracking focus sessions to unlock personalized productivity insights.
+                  </>
+                )}
               </p>
-              <p className="text-[10px] text-muted-foreground">Goal: {deepWorkGoal}h</p>
-            </div>
-          </div>
-          <div className="bg-card/30 rounded-lg p-4 border border-border">
-            <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium">Shallow Work</span>
-              <span className="text-sm font-bold text-muted-foreground">{formatTime(shallowWorkHours)}</span>
-            </div>
-            <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-              <div className="bg-muted-foreground h-full rounded-full" style={{ width: `${Math.min(100, (shallowWorkHours / 14) * 100)}%` }}></div>
-            </div>
-            <div className="flex justify-between mt-2">
-              <p className="text-[10px] text-muted-foreground italic">Meetings & Admin</p>
-              <p className="text-[10px] text-muted-foreground">Avg: {shallowWorkAvg.toFixed(1)}h/day</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Insights Tip */}
-      <section className="px-6 mb-6">
-        <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex gap-4 items-start">
-          <div className="bg-primary size-8 rounded-lg flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-white text-base">lightbulb</span>
-          </div>
-          <p className="text-xs text-foreground/80 leading-relaxed">
-            <span className="font-bold text-foreground">Pro Insight:</span>{' '}
-            {bestDay ? (
-              <>
-                You are most productive on{' '}
-                <span className="text-primary font-bold underline underline-offset-4">{bestDay.day} mornings</span>. 
-                Consider scheduling your most complex deep work blocks between 8:00 AM and 11:00 AM.
-              </>
-            ) : (
-              <>
-                Start tracking your focus sessions to discover your most productive times.
-                Complete a few focus sessions this week to unlock personalized insights.
-              </>
-            )}
-          </p>
-        </div>
-      </section>
       <CalendarModal 
         isOpen={isCalendarOpen} 
         onClose={() => setIsCalendarOpen(false)} 
@@ -297,4 +288,3 @@ export default function Stats() {
     </div>
   );
 }
-

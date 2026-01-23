@@ -17,7 +17,6 @@ export default function Tasks() {
     const loadTasks = () => setTasks(storage.getTasks());
     loadTasks();
     
-    // Subscribe to task changes for real-time updates
     const unsubscribe = storage.onChange('tasks', loadTasks);
     return () => unsubscribe();
   }, []);
@@ -50,7 +49,6 @@ export default function Tasks() {
     toast.success("Task added");
   };
 
-  // Date helpers - normalize dates to midnight for accurate comparison
   const normalizeDate = (date: Date) => {
     const normalized = new Date(date);
     normalized.setHours(0, 0, 0, 0);
@@ -79,26 +77,6 @@ export default function Tasks() {
     return date.getTime() > today.getTime();
   };
 
-  const isPast = (dateStr: string) => {
-    if (!dateStr) return false;
-    const today = normalizeDate(new Date());
-    const date = normalizeDate(new Date(dateStr));
-    return date.getTime() < today.getTime();
-  };
-
-  // Filter tasks based on active tab
-  const filteredTasks = tasks.filter(task => {
-    if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (activeTab === 'today') {
-      // Today tab: show tasks due today or with no due date, excluding past tasks
-      return isToday(task.dueDate) || !task.dueDate;
-    }
-    // Upcoming tab: show tasks due after today
-    return isUpcoming(task.dueDate) && !isToday(task.dueDate);
-  });
-
   const todayTasks = tasks.filter(t => isToday(t.dueDate) || !t.dueDate);
   const tomorrowTasks = tasks.filter(t => isTomorrow(t.dueDate));
   const laterTasks = tasks.filter(t => 
@@ -106,153 +84,145 @@ export default function Tasks() {
   );
 
   const remainingSessions = tasks.filter(t => !t.completed).length;
-  const userName = user?.email?.split('@')[0] || 'there';
+  const completedToday = todayTasks.filter(t => t.completed).length;
 
-  const renderTaskItem = (task: Task, opacity: string = '') => (
+  const renderTaskItem = (task: Task, index: number) => (
     <div 
       key={task.id}
-      className={`flex items-center group gap-6 py-2 ${opacity}`}
+      className="flex items-center group gap-4 py-4 px-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm transition-all hover:bg-card/80 animate-fade-up"
+      style={{ animationDelay: `${index * 0.05}s`, opacity: 0, animationFillMode: 'forwards' }}
     >
-      <div className="flex-shrink-0">
-        <button
-          onClick={() => toggleComplete(task.id)}
-          className={`size-7 rounded-full border-2 transition-all cursor-pointer flex items-center justify-center ${
-            task.completed 
-              ? 'bg-primary border-primary' 
-              : task.priority === 'high' 
-                ? 'border-primary/60' 
-                : 'border-primary/40'
-          }`}
-        >
-          {task.completed && (
-            <span className="material-symbols-outlined text-white text-base">check</span>
-          )}
-        </button>
-      </div>
+      <button
+        onClick={() => toggleComplete(task.id)}
+        className={`flex-shrink-0 size-6 rounded-lg border-2 transition-all flex items-center justify-center ${
+          task.completed 
+            ? 'bg-primary border-primary' 
+            : task.priority === 'high' 
+              ? 'border-highlight/60 hover:border-highlight' 
+              : 'border-border hover:border-primary/50'
+        }`}
+      >
+        {task.completed && (
+          <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'wght' 500" }}>check</span>
+        )}
+      </button>
+      
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          {task.priority === 'high' && (
-            <span className="material-symbols-outlined text-amber-500 text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-              fiber_manual_record
-            </span>
+          {task.priority === 'high' && !task.completed && (
+            <div className="priority-dot high" />
           )}
-          <p className={`text-lg font-medium truncate group-active:opacity-70 ${
+          <p className={`text-base font-medium truncate ${
             task.completed ? 'line-through text-muted-foreground' : 'text-foreground'
           }`}>
             {task.title}
           </p>
         </div>
         {task.description && (
-          <p className="text-xs text-muted-foreground mt-0.5">{task.description}</p>
+          <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>
         )}
       </div>
-      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={() => deleteTask(task.id)}
-          className="p-2 hover:bg-destructive/10 rounded-lg transition-colors"
-        >
-          <span className="material-symbols-outlined text-muted-foreground hover:text-destructive text-xl">delete</span>
-        </button>
-      </div>
+      
+      <button
+        onClick={() => deleteTask(task.id)}
+        className="flex-shrink-0 opacity-0 group-hover:opacity-100 p-2 hover:bg-destructive/10 rounded-xl transition-all"
+      >
+        <span className="material-symbols-outlined text-muted-foreground hover:text-destructive text-lg">delete</span>
+      </button>
     </div>
+  );
+
+  const renderSection = (title: string, taskList: Task[], emptyMessage: string) => (
+    <section className="space-y-3 mb-8">
+      <div className="flex items-center gap-3 px-1">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">{title}</h2>
+        <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+        <span className="text-xs font-medium text-muted-foreground">{taskList.length}</span>
+      </div>
+      {taskList.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="size-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
+            <span className="material-symbols-outlined text-muted-foreground text-2xl">task_alt</span>
+          </div>
+          <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {taskList.map((task, index) => renderTaskItem(task, index))}
+        </div>
+      )}
+    </section>
   );
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-hidden">
-      {/* Header Section */}
-      <header className="flex flex-col px-6 pt-12 pb-6 gap-2 sticky top-0 z-20 bg-background/80 backdrop-blur-md">
-        <div className="flex justify-between items-center">
-          <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Inbox</h1>
-          <div className="flex gap-4">
-            <button className="p-2 rounded-full hover:bg-primary/10 transition-colors">
-              <span className="material-symbols-outlined text-2xl">search</span>
-            </button>
-            <button 
-              onClick={() => navigate('/settings')}
-              className="size-10 rounded-full overflow-hidden border-2 border-primary/20 bg-card flex items-center justify-center"
-            >
-              <span className="material-symbols-outlined text-muted-foreground">person</span>
-            </button>
-          </div>
-        </div>
-        <p className="text-muted-foreground text-sm font-medium tracking-wide">
-          {remainingSessions} deep work sessions remaining
-        </p>
-      </header>
+      {/* Atmospheric backgrounds */}
+      <div className="absolute -top-32 -right-32 size-80 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-32 -left-32 size-64 bg-highlight/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto no-scrollbar px-6 pb-32">
-        {/* Tabs */}
-        <nav className="flex gap-8 border-b border-border mb-8 sticky top-0 bg-background z-10 py-2">
+      {/* Header */}
+      <header className="flex flex-col px-6 pt-14 pb-4 gap-4 sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/30">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Inbox</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {remainingSessions} tasks remaining
+              {completedToday > 0 && <span className="text-primary"> · {completedToday} done today</span>}
+            </p>
+          </div>
+          <button 
+            onClick={() => navigate('/settings')}
+            className="size-11 rounded-2xl overflow-hidden border border-border/50 bg-card/80 flex items-center justify-center hover:bg-accent transition-colors"
+          >
+            <span className="material-symbols-outlined text-muted-foreground">person</span>
+          </button>
+        </div>
+
+        {/* Tab Switcher */}
+        <nav className="flex gap-1 p-1 rounded-2xl bg-muted/50">
           <button 
             onClick={() => setActiveTab('today')}
-            className={`relative pb-3 text-sm font-bold tracking-widest uppercase transition-colors ${
-              activeTab === 'today' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === 'today' 
+                ? 'bg-card text-foreground shadow-sm' 
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Today
-            {activeTab === 'today' && (
-              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></span>
-            )}
           </button>
           <button 
             onClick={() => setActiveTab('upcoming')}
-            className={`pb-3 text-sm font-bold tracking-widest uppercase transition-colors ${
-              activeTab === 'upcoming' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === 'upcoming' 
+                ? 'bg-card text-foreground shadow-sm' 
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Upcoming
-            {activeTab === 'upcoming' && (
-              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></span>
-            )}
           </button>
         </nav>
+      </header>
 
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto no-scrollbar px-6 pb-32 pt-6">
         {activeTab === 'today' ? (
-          <section className="space-y-8 mb-12">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
-              Today <span className="h-px flex-1 bg-border"></span>
-            </h2>
-            {todayTasks.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No tasks for today</p>
-            ) : (
-              todayTasks.map(task => renderTaskItem(task))
-            )}
-          </section>
+          renderSection('Today', todayTasks, 'No tasks for today. Enjoy your free time!')
         ) : (
           <>
-            {tomorrowTasks.length > 0 && (
-              <section className="space-y-4 mb-8">
-                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
-                  Tomorrow <span className="h-px flex-1 bg-border"></span>
-                </h2>
-                <div className="space-y-2">
-                  {tomorrowTasks.map(task => renderTaskItem(task, 'opacity-60'))}
-                </div>
-              </section>
-            )}
-            {laterTasks.length > 0 && (
-              <section className="space-y-4">
-                <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
-                  Later <span className="h-px flex-1 bg-border"></span>
-                </h2>
-                <div className="space-y-2">
-                  {laterTasks.map(task => renderTaskItem(task, 'opacity-60'))}
-                </div>
-              </section>
-            )}
+            {tomorrowTasks.length > 0 && renderSection('Tomorrow', tomorrowTasks, '')}
+            {laterTasks.length > 0 && renderSection('Later', laterTasks, '')}
             {tomorrowTasks.length === 0 && laterTasks.length === 0 && (
-              <p className="text-muted-foreground text-center py-8">No upcoming tasks</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                  <span className="material-symbols-outlined text-primary text-3xl">event_available</span>
+                </div>
+                <p className="text-foreground font-medium mb-1">All caught up!</p>
+                <p className="text-muted-foreground text-sm">No upcoming tasks scheduled</p>
+              </div>
             )}
           </>
         )}
       </main>
-
-
-
-      {/* Visual Background Accents */}
-      <div className="absolute -top-24 -right-24 size-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-48 -left-24 size-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
       {/* Quick Add Modal */}
       <QuickAddTaskModal 

@@ -21,7 +21,6 @@ export default function Layout() {
     toast.success("Task added");
   };
 
-  // Check if we're on a page that should hide the nav (like timer)
   const hideNav = location.pathname === '/timer' || location.pathname === '/blocked';
 
   const navItems = [
@@ -42,49 +41,89 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      {/* Bottom Navigation Bar - iOS Style */}
+      {/* Premium Bottom Navigation */}
       {!hideNav && (
-        <nav className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto bg-background/80 backdrop-blur-xl border-t border-border/30 px-8 py-4 flex justify-between items-center z-10">
-          {navItems.slice(0, 2).map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-1 transition-colors ${
-                isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <span className="material-symbols-outlined">{item.icon}</span>
-              <span className="text-[10px] font-bold uppercase tracking-tighter">{item.label}</span>
-            </button>
-          ))}
+        <nav className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto z-50">
+          {/* Gradient fade background */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none" style={{ height: '120%', top: '-20%' }} />
+          
+          {/* Navigation bar */}
+          <div className="relative bg-card/80 backdrop-blur-2xl border-t border-border/30 px-6 py-3 flex justify-between items-center">
+            {navItems.slice(0, 2).map((item) => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`flex flex-col items-center gap-1.5 min-w-[56px] transition-all duration-300 ${
+                  isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <div className={`p-2 rounded-xl transition-all duration-300 ${
+                  isActive(item.path) 
+                    ? 'bg-primary/15' 
+                    : ''
+                }`}
+                style={isActive(item.path) ? { boxShadow: '0 0 20px hsl(var(--primary) / 0.3)' } : {}}
+                >
+                  <span 
+                    className={`material-symbols-outlined text-xl transition-transform duration-200 ${
+                      isActive(item.path) ? 'scale-110' : ''
+                    }`}
+                    style={isActive(item.path) ? { fontVariationSettings: "'FILL' 1, 'wght' 400" } : {}}
+                  >
+                    {item.icon}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
+              </button>
+            ))}
 
-          {/* Center Add Button */}
-          <div className="relative -top-8">
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="flex size-14 items-center justify-center rounded-full bg-card border border-border text-foreground zen-card-shadow hover:bg-card/80 transition-colors"
-            >
-              <span className="material-symbols-outlined">add</span>
-            </button>
+            {/* Center Floating Add Button */}
+            <div className="relative -top-7">
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="relative flex size-14 items-center justify-center rounded-2xl text-white transition-all hover:scale-105 press-effect"
+                style={{ 
+                  background: 'var(--gradient-primary)',
+                  boxShadow: '0 8px 32px hsla(258, 85%, 65%, 0.4), 0 4px 12px hsla(258, 85%, 65%, 0.3)'
+                }}
+              >
+                <span className="material-symbols-outlined text-2xl">add</span>
+              </button>
+            </div>
+
+            {navItems.slice(2).map((item) => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`flex flex-col items-center gap-1.5 min-w-[56px] transition-all duration-300 ${
+                  isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <div className={`p-2 rounded-xl transition-all duration-300 ${
+                  isActive(item.path) 
+                    ? 'bg-primary/15' 
+                    : ''
+                }`}
+                style={isActive(item.path) ? { boxShadow: '0 0 20px hsl(var(--primary) / 0.3)' } : {}}
+                >
+                  <span 
+                    className={`material-symbols-outlined text-xl transition-transform duration-200 ${
+                      isActive(item.path) ? 'scale-110' : ''
+                    }`}
+                    style={isActive(item.path) ? { fontVariationSettings: "'FILL' 1, 'wght' 400" } : {}}
+                  >
+                    {item.icon}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
+              </button>
+            ))}
           </div>
-
-          {navItems.slice(2).map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-1 transition-colors ${
-                isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <span className="material-symbols-outlined">{item.icon}</span>
-              <span className="text-[10px] font-bold uppercase tracking-tighter">{item.label}</span>
-            </button>
-          ))}
         </nav>
       )}
 
       {/* Bottom Safe Area Spacer */}
-      {!hideNav && <div className="h-20"></div>}
+      {!hideNav && <div className="h-24" />}
 
       {/* Quick Add Modal */}
       <QuickAddTaskModal 
