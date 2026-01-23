@@ -16,11 +16,17 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
+import android.os.Handler;
+import android.os.Looper;
+import android.accessibilityservice.AccessibilityService;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 public class BlockingOverlayService extends Service {
+    
+    private String currentBlockedPackage = null;
+    private Handler killHandler = new Handler(Looper.getMainLooper());
 
     private static final String CHANNEL_ID = "app_blocker_channel";
     private static final int NOTIFICATION_ID = 1001;
@@ -28,6 +34,7 @@ public class BlockingOverlayService extends Service {
     private WindowManager windowManager;
     private View overlayView;
     private boolean isOverlayVisible = false;
+    private boolean isShowing = false;  // Prevents duplicate show attempts
 
     @Override
     public void onCreate() {
@@ -41,6 +48,11 @@ public class BlockingOverlayService extends Service {
         startForeground(NOTIFICATION_ID, createNotification());
         
         if (intent != null && "SHOW_OVERLAY".equals(intent.getAction())) {
+            // Prevent duplicate show attempts
+            if (isOverlayVisible || isShowing) {
+                return START_STICKY;
+            }
+            isShowing = true;  // Set immediately before async view operations
             String blockedPackage = intent.getStringExtra("blocked_package");
             showOverlay(blockedPackage);
         }
@@ -50,8 +62,12 @@ public class BlockingOverlayService extends Service {
 
     private void showOverlay(String packageName) {
         if (isOverlayVisible) {
+            isShowing = false;
             return;
         }
+        
+        // Store the blocked package for killing later
+        currentBlockedPackage = packageName;
 
         LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
         overlayView = inflater.inflate(R.layout.overlay_blocked, null);
@@ -69,21 +85,23 @@ public class BlockingOverlayService extends Service {
             }
         }
 
-        // Set up Go Back button
+        // Set up Go Back button - this will kill the blocked app
         Button goBackButton = overlayView.findViewById(R.id.btn_go_back);
         if (goBackButton != null) {
             goBackButton.setOnClickListener(v -> {
+                notifyOverlayDismissed();
                 hideOverlay();
-                goToHomeScreen();
+                killBlockedApp();
             });
         }
 
-        // Set up Open Omit button
+        // Set up Open Omit button - this will also kill the blocked app first
         Button openOmitButton = overlayView.findViewById(R.id.btn_open_omit);
         if (openOmitButton != null) {
             openOmitButton.setOnClickListener(v -> {
+                notifyOverlayDismissed();
                 hideOverlay();
-                openOmitApp();
+                killBlockedAppThenOpenOmit();
             });
         }
 
@@ -109,7 +127,9 @@ public class BlockingOverlayService extends Service {
         try {
             windowManager.addView(overlayView, params);
             isOverlayVisible = true;
+            isShowing = false;
         } catch (Exception e) {
+            isShowing = false;
             e.printStackTrace();
         }
     }
@@ -125,12 +145,84 @@ public class BlockingOverlayService extends Service {
             }
         }
     }
+    
+    private void notifyOverlayDismissed() {
+        // Notify AppBlockerService to start cooldown timer
+        AppBlockerService service = AppBlockerService.getInstance();
+        if (service != null) {
+            service.onOverlayDismissed();
+        }
+    }
 
     private void goToHomeScreen() {
         Intent homeIntent = new Intent(Intent.ACTION_MAIN);
         homeIntent.addCategory(Intent.CATEGORY_HOME);
         homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(homeIntent);
+    }
+    
+    /**
+     * Kills the blocked app by performing multiple BACK actions and then going to home.
+     * Uses the AccessibilityService's GLOBAL_ACTION_BACK to close the app.
+     */
+    private void killBlockedApp() {
+        AppBlockerService service = AppBlockerService.getInstance();
+        if (service != null) {
+            // Perform BACK action multiple times to ensure app is closed
+            // First back immediately
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+            
+            // Second back after a short delay
+            killHandler.postDelayed(() -> {
+                if (AppBlockerService.getInstance() != null) {
+                    AppBlockerService.getInstance().performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+                }
+            }, 100);
+            
+            // Third back and then go home
+            killHandler.postDelayed(() -> {
+                if (AppBlockerService.getInstance() != null) {
+                    AppBlockerService.getInstance().performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+                }
+                // Go to home screen after all back actions
+                goToHomeScreen();
+            }, 200);
+        } else {
+            // Fallback: just go to home screen
+            goToHomeScreen();
+        }
+        
+        currentBlockedPackage = null;
+    }
+    
+    /**
+     * Kills the blocked app and then opens Omit.
+     */
+    private void killBlockedAppThenOpenOmit() {
+        AppBlockerService service = AppBlockerService.getInstance();
+        if (service != null) {
+            // Perform BACK action multiple times to ensure app is closed
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+            
+            killHandler.postDelayed(() -> {
+                if (AppBlockerService.getInstance() != null) {
+                    AppBlockerService.getInstance().performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+                }
+            }, 100);
+            
+            killHandler.postDelayed(() -> {
+                if (AppBlockerService.getInstance() != null) {
+                    AppBlockerService.getInstance().performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+                }
+                // Open Omit after all back actions
+                openOmitApp();
+            }, 200);
+        } else {
+            // Fallback: just open Omit
+            openOmitApp();
+        }
+        
+        currentBlockedPackage = null;
     }
 
     private void openOmitApp() {
