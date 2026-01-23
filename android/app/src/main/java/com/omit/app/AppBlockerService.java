@@ -3,14 +3,29 @@ package com.omit.app;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.view.accessibility.AccessibilityEvent;
 
+import android.os.Handler;
+import android.os.Looper;
+
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class AppBlockerService extends AccessibilityService {
 
     private static AppBlockerService instance;
     private String lastBlockedPackage = "";
+    private Set<String> launcherPackages;
+    private long lastOverlayDismissedTime = 0;
+    private static final long COOLDOWN_MS = 2000; // 2 second cooldown after overlay dismissed
+    
+    // Debounce mechanism to wait for app to fully load
+    private Handler overlayHandler = new Handler(Looper.getMainLooper());
+    private Runnable pendingOverlayRunnable;
+    private String pendingBlockedPackage = "";
+    private static final long DEBOUNCE_DELAY_MS = 800; // Wait 800ms for app to fully load
 
     public static AppBlockerService getInstance() {
         return instance;
@@ -29,23 +44,66 @@ public class AppBlockerService extends AccessibilityService {
             String packageName = packageNameSeq.toString();
             List<String> blockedPackages = AppBlockerPlugin.getBlockedPackages();
             
-            // Don't block our own app
+            // Don't block our own app - and reset state when in our app
             if (packageName.equals(getPackageName())) {
+                cancelPendingOverlay();
+                lastBlockedPackage = "";
+                return;
+            }
+            
+            // Reset when user goes to home/launcher
+            if (launcherPackages != null && launcherPackages.contains(packageName)) {
+                cancelPendingOverlay();
                 lastBlockedPackage = "";
                 return;
             }
             
             // Check if this package should be blocked
             if (blockedPackages.contains(packageName)) {
-                // Avoid repeatedly showing overlay for same package
-                if (!packageName.equals(lastBlockedPackage)) {
-                    lastBlockedPackage = packageName;
-                    showBlockingOverlay(packageName);
+                // If it's the same package that's pending, just reset the timer (debounce)
+                if (packageName.equals(pendingBlockedPackage)) {
+                    // Same package, reset debounce timer
+                    scheduleOverlay(packageName);
+                } else if (!packageName.equals(lastBlockedPackage)) {
+                    // New blocked package detected
+                    pendingBlockedPackage = packageName;
+                    scheduleOverlay(packageName);
                 }
             } else {
+                cancelPendingOverlay();
                 lastBlockedPackage = "";
             }
         }
+    }
+    
+    private void cancelPendingOverlay() {
+        if (pendingOverlayRunnable != null) {
+            overlayHandler.removeCallbacks(pendingOverlayRunnable);
+            pendingOverlayRunnable = null;
+        }
+        pendingBlockedPackage = "";
+    }
+    
+    private void scheduleOverlay(String packageName) {
+        // Cancel any existing pending overlay
+        if (pendingOverlayRunnable != null) {
+            overlayHandler.removeCallbacks(pendingOverlayRunnable);
+        }
+        
+        pendingOverlayRunnable = () -> {
+            // Double-check cooldown and that we're still trying to block this package
+            if (System.currentTimeMillis() - lastOverlayDismissedTime < COOLDOWN_MS) {
+                pendingBlockedPackage = "";
+                return;
+            }
+            
+            lastBlockedPackage = packageName;
+            showBlockingOverlay(packageName);
+            pendingBlockedPackage = "";
+        };
+        
+        // Schedule the overlay to appear after debounce delay
+        overlayHandler.postDelayed(pendingOverlayRunnable, DEBOUNCE_DELAY_MS);
     }
 
     private void showBlockingOverlay(String packageName) {
@@ -53,6 +111,13 @@ public class AppBlockerService extends AccessibilityService {
         intent.putExtra("blocked_package", packageName);
         intent.setAction("SHOW_OVERLAY");
         startService(intent);
+    }
+    
+    // Called when overlay is dismissed to start cooldown
+    public void onOverlayDismissed() {
+        lastOverlayDismissedTime = System.currentTimeMillis();
+        lastBlockedPackage = ""; // Reset so it can be blocked again after cooldown
+        cancelPendingOverlay(); // Cancel any pending overlay too
     }
 
     @Override
@@ -65,6 +130,9 @@ public class AppBlockerService extends AccessibilityService {
         super.onServiceConnected();
         instance = this;
         
+        // Cache launcher packages for home screen detection
+        launcherPackages = getLauncherPackages();
+        
         AccessibilityServiceInfo info = new AccessibilityServiceInfo();
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
@@ -73,6 +141,17 @@ public class AppBlockerService extends AccessibilityService {
         
         setServiceInfo(info);
     }
+    
+    private Set<String> getLauncherPackages() {
+        Set<String> launchers = new HashSet<>();
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        List<ResolveInfo> resolveInfos = getPackageManager().queryIntentActivities(intent, 0);
+        for (ResolveInfo info : resolveInfos) {
+            launchers.add(info.activityInfo.packageName);
+        }
+        return launchers;
+    }
 
     @Override
     public void onDestroy() {
@@ -80,3 +159,4 @@ public class AppBlockerService extends AccessibilityService {
         instance = null;
     }
 }
+
