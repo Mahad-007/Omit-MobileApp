@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { storage, Task } from "@/lib/storage";
 import AppBlocker, { isCapacitor } from "@/lib/app-blocker";
+import { NotificationManager } from "@/utils/notifications";
 
 export default function FocusTimer() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function FocusTimer() {
     // Android stopping logic is now handled by PersistentBlockerManager listening to session end
     
     storage.endFocusSession();
+    NotificationManager.cancelRemainingTime();
     window.postMessage({ type: 'OMIT_SYNC_REQUEST', payload: { focusMode: false } }, '*');
     navigate('/');
   }, [navigate]);
@@ -75,7 +77,13 @@ export default function FocusTimer() {
         return;
       }
 
-      setTimeRemaining(Math.floor(remaining / 1000));
+      const remainingSeconds = Math.floor(remaining / 1000);
+      setTimeRemaining(remainingSeconds);
+
+      // Update notification every minute or at start
+      if (remainingSeconds % 60 === 0 || remainingSeconds === Math.floor((currentSession.endTime - Date.now()) / 1000)) {
+        NotificationManager.updateRemainingTime(remainingSeconds);
+      }
     }, 1000);
 
     return () => clearInterval(interval);

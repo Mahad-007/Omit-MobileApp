@@ -13,6 +13,9 @@ export class NotificationManager {
 
   static async scheduleFocusEnd(durationMinutes: number) {
     try {
+      const granted = await this.requestPermissions();
+      if (!granted) return false;
+
       // Cancel any existing notifications properly
       await this.cancelAll();
 
@@ -26,7 +29,7 @@ export class NotificationManager {
             id: 1001,
             schedule: { at: scheduledTime },
             sound: 'res://platform_default',
-            smallIcon: 'ic_stat_icon_config_sample', // Default fallback
+            smallIcon: 'ic_stat_icon_config_sample',
             actionTypeId: '',
             extra: null
           }
@@ -39,8 +42,43 @@ export class NotificationManager {
     }
   }
 
+  static async updateRemainingTime(seconds: number) {
+    try {
+      const minutes = Math.ceil(seconds / 60);
+      const id = 2000; // Fixed ID for remaining time notification
+
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title: 'Focus Session Active',
+            body: `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} remaining`,
+            id: id,
+            schedule: { at: new Date(Date.now() + 100) }, // Immediate
+            sound: 'res://platform_default',
+            ongoing: true, // Android persistent notification
+            autoCancel: false,
+            smallIcon: 'ic_stat_icon_config_sample',
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Failed to update remaining time notification:', error);
+    }
+  }
+
+  static async cancelRemainingTime() {
+    try {
+      await LocalNotifications.cancel({ notifications: [{ id: 2000 }] });
+    } catch (error) {
+      console.error('Failed to cancel remaining time notification:', error);
+    }
+  }
+
   static async sendInstantNotification(title: string, body: string) {
     try {
+      const granted = await this.requestPermissions();
+      if (!granted) return;
+
       await LocalNotifications.schedule({
         notifications: [
           {
@@ -59,6 +97,9 @@ export class NotificationManager {
 
   static async scheduleTaskNotification(task: { id: string, title: string, dueDate: string, priority?: string }) {
     try {
+      const granted = await this.requestPermissions();
+      if (!granted) return false;
+
       const scheduledTime = new Date(task.dueDate);
       if (scheduledTime.getTime() <= Date.now()) return false;
 
