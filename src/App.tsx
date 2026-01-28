@@ -21,13 +21,17 @@ import Blocked from "./pages/Blocked";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import { PersistentBlockerManager } from "@/components/PersistentBlockerManager";
 
 const queryClient = new QueryClient();
 
 import { useEffect } from "react";
 import { storage } from "@/lib/storage";
+import { useTaskNotifications } from "@/hooks/useTaskNotifications";
 
 const App = () => {
+    useTaskNotifications();
+
     useEffect(() => {
         // Sync data to extension on app load
         storage.forceSync();
@@ -55,6 +59,7 @@ const App = () => {
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <TooltipProvider>
         <AuthProvider>
+          <PersistentBlockerManager />
           <Toaster />
           <Sonner />
           <BrowserRouter

@@ -340,6 +340,77 @@ class LocalStorageService {
     return null;
   }
 
+  // --- PERSISTENT BLOCKING HELPERS ---
+  
+  // Get all apps that should be blocked based on session state
+  getEffectiveBlockedApps(sessionActive: boolean): BlockedApp[] {
+      const allApps = this.getBlockedApps();
+      return allApps.filter(app => {
+          // Always block if mode is 'always'
+          // Note: we check isEnabled as well for safety, but UI should likely enforce isEnabled=true if blockMode=always
+          // For now, let's assume 'always' implies it CAN be blocked, but we still respect the main toggle?
+          // Actually, usually "Always Block" overrides the main toggle, OR the main toggle enables the feature and 'always'/ 'focus' selects the mode.
+          // Looking at SocialBlocker.tsx, `app.isEnabled` seems to be the main "on/off" switch.
+          // So we should probably check isEnabled first.
+          if (!app.isEnabled) return false;
+
+          if (app.blockMode === 'always') return true;
+          
+          // If session is active, block if enabled
+          if (sessionActive) return true;
+          
+          return false;
+      });
+  }
+
+  // Check if there are any apps that are set to always block
+  hasPersistentApps(): boolean {
+      const allApps = this.getBlockedApps();
+      return allApps.some(app => app.isEnabled && app.blockMode === 'always');
+  }
+
+
+  // --- NATIVE ANDROID APPS ---
+  
+  getAndroidSessionApps(): string[] {
+      const data = localStorage.getItem('android_blocked_apps'); // Legacy key
+      return data ? JSON.parse(data) : [];
+  }
+
+  getAndroidPersistentApps(): string[] {
+      const data = localStorage.getItem('android_persistent_apps'); // New key
+      return data ? JSON.parse(data) : [];
+  }
+
+  saveAndroidSessionApps(packageNames: string[]): void {
+      localStorage.setItem('android_blocked_apps', JSON.stringify(packageNames));
+      this._updateExtensionSync();
+      this.notifyChange('blockedApps'); // Reuse this event or add 'androidApps'
+  }
+
+  saveAndroidPersistentApps(packageNames: string[]): void {
+      localStorage.setItem('android_persistent_apps', JSON.stringify(packageNames));
+      this._updateExtensionSync();
+      this.notifyChange('blockedApps');
+  }
+
+  toggleAndroidApp(packageName: string, mode: 'session' | 'persistent' | 'off'): void {
+      const sessionApps = this.getAndroidSessionApps();
+      const persistentApps = this.getAndroidPersistentApps();
+      
+      // Remove from both first
+      const uniqueSession = sessionApps.filter(p => p !== packageName);
+      const uniquePersistent = persistentApps.filter(p => p !== packageName);
+      
+      if (mode === 'session') {
+          uniqueSession.push(packageName);
+      } else if (mode === 'persistent') {
+          uniquePersistent.push(packageName);
+      }
+      
+      this.saveAndroidSessionApps(uniqueSession);
+      this.saveAndroidPersistentApps(uniquePersistent);
+  }
 
   // --- FOCUS SESSIONS ---
   getFocusSessions(): FocusSession[] {
@@ -703,6 +774,7 @@ class LocalStorageService {
     }
     localStorage.removeItem('focussphere_current_session');
     this._updateExtensionSync();
+    this.notifyChange('focusSessions');
   }
 
   getActiveSession(): { startTime: number; endTime: number; duration: number } | null {

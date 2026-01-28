@@ -65,7 +65,7 @@ export default function Blocked() {
       </div>
 
       {/* Overlay Container */}
-      <div className="relative z-10 h-screen w-full flex flex-col items-center justify-between bg-background/85 glass-blur px-6 text-foreground safe-area-top safe-area-bottom">
+      <div className="relative z-10 h-screen w-full flex flex-col items-center justify-between bg-background px-6 text-foreground safe-area-top safe-area-bottom">
         {/* Top Status/Icon */}
         <div className="pt-16 flex flex-col items-center">
           <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-6 border border-primary/30">

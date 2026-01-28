@@ -72,7 +72,7 @@ export default function SignUp() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-8 relative z-50 pointer-events-auto">
         <div className="text-center">
           <img 
             src="/omit-logo.png" 
@@ -179,7 +179,7 @@ export default function SignUp() {
                 )}
               />
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading} onClick={() => console.log('Create account button clicked')}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create account
               </Button>

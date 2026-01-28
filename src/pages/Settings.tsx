@@ -38,7 +38,7 @@ export default function Settings() {
       <div className="absolute bottom-64 left-0 w-64 h-64 bg-highlight/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/30">
+      <header className="sticky top-0 z-20 bg-background border-b border-border/30">
         <div className="flex items-center p-4 pb-3 justify-between">
           <button 
             onClick={() => navigate('/')}
@@ -54,7 +54,7 @@ export default function Settings() {
       <main className="flex-1 px-4 pb-10 space-y-6 pt-4">
         {/* Profile Section */}
         <section className="animate-fade-up">
-          <div className="flex items-center gap-4 p-5 rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm zen-card-shadow">
+          <div className="flex items-center gap-4 p-5 rounded-2xl border border-border/50 bg-card zen-card-shadow">
             <div className="relative">
               <div className="size-16 rounded-2xl flex items-center justify-center overflow-hidden" style={{ background: 'var(--gradient-primary)' }}>
                 <span className="material-symbols-outlined text-white text-3xl">person</span>
@@ -71,11 +71,11 @@ export default function Settings() {
         </section>
 
         {/* Appearance */}
-        <section className="space-y-3 animate-fade-up stagger-1" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <section className="space-y-3 animate-fade-up stagger-1">
           <h3 className="text-muted-foreground text-xs font-bold uppercase tracking-widest px-1">
             Appearance
           </h3>
-          <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm overflow-hidden">
+          <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center">
@@ -95,11 +95,11 @@ export default function Settings() {
         </section>
 
         {/* Focus Settings */}
-        <section className="space-y-3 animate-fade-up stagger-2" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <section className="space-y-3 animate-fade-up stagger-2">
           <h3 className="text-muted-foreground text-xs font-bold uppercase tracking-widest px-1">
             Focus Settings
           </h3>
-          <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm overflow-hidden">
+          <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-border/30">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center">
@@ -143,11 +143,11 @@ export default function Settings() {
         </section>
 
         {/* Notifications */}
-        <section className="space-y-3 animate-fade-up stagger-3" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <section className="space-y-3 animate-fade-up stagger-3">
           <h3 className="text-muted-foreground text-xs font-bold uppercase tracking-widest px-1">
             Notifications
           </h3>
-          <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm overflow-hidden">
+          <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-border/30">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center">
@@ -182,7 +182,7 @@ export default function Settings() {
         </section>
 
         {/* Account Actions */}
-        <section className="space-y-3 pt-4 animate-fade-up stagger-4" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <section className="space-y-3 pt-4 animate-fade-up stagger-4">
           <button 
             onClick={handleSignOut}
             className="w-full py-4 rounded-2xl bg-destructive/10 text-destructive font-bold hover:bg-destructive/15 transition-colors flex items-center justify-center gap-2 border border-destructive/20"
@@ -193,7 +193,7 @@ export default function Settings() {
         </section>
 
         {/* Footer */}
-        <div className="text-center pt-4 animate-fade-up stagger-5" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+        <div className="text-center pt-4 animate-fade-up stagger-5">
           <p className="text-muted-foreground text-xs">Settings are saved automatically</p>
           <p className="text-muted-foreground/50 text-xs mt-2">Omit • Deep Work OS v1.0</p>
         </div>

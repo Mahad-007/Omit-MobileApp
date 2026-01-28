@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { storage, BlockedApp, Settings } from "@/lib/storage";
+import { useBlockedApps } from "@/lib/api";
 import { toast } from "sonner";
 import { AndroidAppBlocker } from "@/components/AndroidAppBlocker";
 import AppBlocker, { isCapacitor } from "@/lib/app-blocker";
 import { Switch } from "@/components/ui/switch";
+import { NotificationManager } from "@/utils/notifications";
 
 const defaultApps: { category: string; apps: Omit<BlockedApp, 'id'>[] }[] = [
   {
@@ -45,7 +47,7 @@ const appIcons: Record<string, { icon: string; color: string }> = {
 
 export default function SocialBlocker() {
   const navigate = useNavigate();
-  const [apps, setApps] = useState<BlockedApp[]>([]);
+  const { data: apps = [], toggle } = useBlockedApps();
   const [settings, setSettings] = useState<Settings>(storage.getSettings());
   const [searchQuery, setSearchQuery] = useState('');
   const [focusDuration, setFocusDuration] = useState(25);
@@ -53,20 +55,10 @@ export default function SocialBlocker() {
   const [dailyUsage, setDailyUsage] = useState(0);
 
   useEffect(() => {
-    const savedApps = storage.getBlockedApps();
-    if (savedApps.length === 0) {
-      const initialApps: BlockedApp[] = defaultApps.flatMap(cat => 
-        cat.apps.map((app, idx) => ({
-          ...app,
-          id: `${cat.category.toLowerCase().replace(' ', '-')}-${idx}`,
-        }))
-      );
-      storage.saveBlockedApps(initialApps);
-      setApps(initialApps);
-    } else {
-      setApps(savedApps);
-    }
+    // Request notification permissions
+    NotificationManager.requestPermissions();
 
+    // Settings still from local storage for now - future task to migrate
     const loadedSettings = storage.getSettings();
     setSettings(loadedSettings);
     setFocusDuration(loadedSettings.defaultFocusDuration);
@@ -85,12 +77,14 @@ export default function SocialBlocker() {
     return () => unsubscribeSettings();
   }, []);
 
-  const toggleApp = (id: string) => {
-    const updatedApps = apps.map(app => 
-      app.id === id ? { ...app, isEnabled: !app.isEnabled } : app
-    );
-    setApps(updatedApps);
-    storage.saveBlockedApps(updatedApps);
+  const toggleApp = async (id: string) => {
+    const app = apps.find(a => a.id === id);
+    if (!app) return;
+    try {
+      await toggle.mutateAsync({ id, blocked: !app.isEnabled }); // API uses is_enabled logic
+    } catch (error) {
+       toast.error("Failed to toggle app");
+    }
   };
 
   const toggleStrictMode = (checked: boolean) => {
@@ -120,16 +114,12 @@ export default function SocialBlocker() {
       return;
     }
 
-    if (onAndroid) {
-      try {
-        const androidBlockedApps = JSON.parse(localStorage.getItem("android_blocked_apps") || "[]");
-        await AppBlocker.setBlockedApps({ apps: androidBlockedApps });
-        await AppBlocker.startMonitoring();
-        localStorage.setItem("android_monitoring", "true");
-      } catch (error) {
-        console.error("Failed to enable native blocking", error);
-        toast.error("Failed to enable app blocking on device");
-      }
+    // Android blocking is now handled by PersistentBlockerManager listening to session changes.
+    // We just need to start the session.
+
+    // Schedule notification for when the session ends
+    if (NotificationManager.scheduleFocusEnd(focusDuration)) {
+       console.log('Notification scheduled for session end');
     }
 
     storage.startFocusSession(focusDuration);
@@ -181,7 +171,7 @@ export default function SocialBlocker() {
       <div className="absolute bottom-64 left-0 w-64 h-64 bg-highlight/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/30">
+      <header className="sticky top-0 z-20 bg-background border-b border-border/30">
         <div className="flex items-center p-4 pb-3 justify-between">
           <button 
             onClick={() => navigate('/')}
@@ -220,7 +210,7 @@ export default function SocialBlocker() {
 
         {/* Search Bar */}
         <div className="px-4 pb-4">
-          <div className="flex w-full items-center rounded-2xl h-12 overflow-hidden bg-card/60 border border-border/50 backdrop-blur-sm">
+          <div className="flex w-full items-center rounded-2xl h-12 overflow-hidden bg-card border border-border/50">
             <div className="text-muted-foreground flex items-center justify-center pl-4">
               <span className="material-symbols-outlined text-lg">search</span>
             </div>
@@ -237,7 +227,7 @@ export default function SocialBlocker() {
       <main className="flex-1 px-4 space-y-5 pt-4">
         {/* Strict Mode Card */}
         <section className="animate-fade-up">
-          <div className="flex items-center justify-between p-5 rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm zen-card-shadow">
+          <div className="flex items-center justify-between p-5 rounded-2xl border border-border/50 bg-card zen-card-shadow">
             <div className="flex items-center gap-3">
               <div className="size-11 rounded-xl bg-primary/15 flex items-center justify-center">
                 <span className="material-symbols-outlined text-primary">verified_user</span>
@@ -254,9 +244,65 @@ export default function SocialBlocker() {
           </div>
         </section>
 
+        {/* Quick Actions Component */}
+        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+          {(() => {
+            const quickApps = [
+              { name: 'YouTube', url: 'youtube.com', icon: 'play_circle', color: 'bg-red-500' },
+              { name: 'Instagram', url: 'instagram.com', icon: 'photo_camera', color: 'bg-gradient-to-br from-purple-500 to-pink-500' },
+              { name: 'Facebook', url: 'facebook.com', icon: 'people', color: 'bg-blue-600' },
+            ];
+
+            return quickApps.map((qApp) => {
+              const app = apps.find(a => a.url === qApp.url);
+              const isEnabled = app?.isEnabled || false;
+              
+              return (
+                <button 
+                  key={qApp.name}
+                  onClick={() => app && toggleApp(app.id)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all min-w-[72px] press-effect ${
+                    isEnabled 
+                      ? 'bg-card border-primary/50 opacity-100 shadow-md transform scale-105' 
+                      : 'bg-card/60 border-border/50 opacity-60'
+                  }`}
+                >
+                  <div className={`size-12 rounded-xl flex items-center justify-center shadow-lg relative ${qApp.color}`}>
+                    <span className="material-symbols-outlined text-white text-xl">{qApp.icon}</span>
+                    {isEnabled && (
+                      <div className="absolute -top-1 -right-1 size-3 bg-white rounded-full flex items-center justify-center shadow-sm">
+                         <span className="material-symbols-outlined text-[10px] text-primary font-bold">check</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className={`text-[10px] font-semibold truncate max-w-[60px] ${
+                    isEnabled ? 'text-foreground' : 'text-foreground/80'
+                  }`}>{qApp.name}</span>
+                </button>
+              );
+            });
+          })()}
+          
+          <button 
+            onClick={() => {
+              const searchInput = document.querySelector('input[placeholder="Search apps..."]') as HTMLInputElement;
+              if (searchInput) {
+                searchInput.focus();
+                toast.info("Search for an app to add");
+              }
+            }}
+            className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border border-dashed border-border/50 bg-card/30 min-w-[72px] hover:bg-card/60 transition-all press-effect"
+          >
+            <div className="size-12 rounded-xl bg-muted/50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-muted-foreground text-xl">add</span>
+            </div>
+            <span className="text-[10px] font-semibold text-muted-foreground">Add</span>
+          </button>
+        </div>
+
         {/* Focus Duration Card */}
-        <section className="animate-fade-up stagger-1" style={{ opacity: 0, animationFillMode: 'forwards' }}>
-          <div className="flex flex-col gap-4 rounded-2xl p-5 border border-border/50 bg-card/60 backdrop-blur-sm zen-card-shadow">
+        <section className="animate-fade-up stagger-1">
+          <div className="flex flex-col gap-4 rounded-2xl p-5 border border-border/50 bg-card zen-card-shadow">
             <div className="flex items-center gap-3">
               <div className="size-11 rounded-xl bg-highlight/15 flex items-center justify-center">
                 <span className="material-symbols-outlined text-highlight">timer</span>
@@ -294,7 +340,7 @@ export default function SocialBlocker() {
             <section 
               key={category.category} 
               className="space-y-3 animate-fade-up"
-              style={{ animationDelay: `${(catIndex + 2) * 0.1}s`, opacity: 0, animationFillMode: 'forwards' }}
+              style={{ animationDelay: `${(catIndex + 2) * 0.1}s` }}
             >
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-muted-foreground text-xs font-bold uppercase tracking-widest">
@@ -314,7 +360,7 @@ export default function SocialBlocker() {
                   return (
                     <div 
                       key={app.id}
-                      className="flex items-center gap-4 rounded-2xl p-4 justify-between border border-border/50 bg-card/60 backdrop-blur-sm transition-all hover:bg-card/80"
+                      className="flex items-center gap-4 rounded-2xl p-4 justify-between border border-border/50 bg-card transition-all hover:bg-card/80"
                     >
                       <div className="flex items-center gap-4">
                         <div className={`size-12 rounded-xl ${iconData.color} flex items-center justify-center shadow-lg`}>

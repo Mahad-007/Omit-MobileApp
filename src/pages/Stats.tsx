@@ -117,7 +117,7 @@ export default function Stats() {
 
       {/* Weekly Focus Chart */}
       <section className="px-6 mb-6 animate-fade-up">
-        <div className="bg-card/60 rounded-2xl p-6 border border-border/50 backdrop-blur-sm zen-card-shadow">
+        <div className="bg-card rounded-2xl p-6 border border-border/50 zen-card-shadow">
           <div className="flex justify-between items-start mb-6">
             <div>
               <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-1">Focus Hours</p>
@@ -168,7 +168,7 @@ export default function Stats() {
       </section>
 
       {/* Time Saved vs Wasted */}
-      <section className="px-6 mb-6 animate-fade-up stagger-1" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+      <section className="px-6 mb-6 animate-fade-up stagger-1">
         <div className="grid grid-cols-2 gap-3">
           <div className="stat-card-positive p-5 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
@@ -198,8 +198,8 @@ export default function Stats() {
       </section>
 
       {/* Stats Grid */}
-      <section className="px-6 grid grid-cols-2 gap-3 mb-6 animate-fade-up stagger-2" style={{ opacity: 0, animationFillMode: 'forwards' }}>
-        <div className="bg-card/60 p-5 rounded-2xl border border-border/50 backdrop-blur-sm">
+      <section className="px-6 grid grid-cols-2 gap-3 mb-6 animate-fade-up stagger-2">
+        <div className="bg-card p-5 rounded-2xl border border-border/50">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Focus Score</p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-3xl font-bold gradient-text">{focusScore}</span>
@@ -211,7 +211,7 @@ export default function Stats() {
             {focusScoreChange >= 0 ? 'Better than last week' : 'Lower than last week'}
           </p>
         </div>
-        <div className="bg-card/60 p-5 rounded-2xl border border-border/50 backdrop-blur-sm">
+        <div className="bg-card p-5 rounded-2xl border border-border/50">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Tasks Done</p>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-3xl font-bold">{tasksCompleted}</span>
@@ -226,8 +226,8 @@ export default function Stats() {
       </section>
 
       {/* Deep Work Breakdown */}
-      <section className="px-6 mb-6 animate-fade-up stagger-3" style={{ opacity: 0, animationFillMode: 'forwards' }}>
-        <div className="bg-card/60 rounded-2xl p-5 border border-border/50 backdrop-blur-sm">
+      <section className="px-6 mb-6 animate-fade-up stagger-3">
+        <div className="bg-card rounded-2xl p-5 border border-border/50">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold">Weekly Breakdown</h3>
           </div>
@@ -255,7 +255,7 @@ export default function Stats() {
       </section>
 
       {/* Pro Insight */}
-      <section className="px-6 mb-6 animate-fade-up stagger-4" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+      <section className="px-6 mb-6 animate-fade-up stagger-4">
         <div className="relative rounded-2xl p-5 overflow-hidden gradient-border">
           <div className="absolute inset-0 bg-primary/5" />
           <div className="relative flex gap-4 items-start">

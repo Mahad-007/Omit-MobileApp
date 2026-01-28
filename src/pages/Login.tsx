@@ -83,10 +83,10 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center p-4 relative overflow-hidden">
       {/* Animated Aurora Background */}
-      <div className="absolute inset-0 bg-aurora opacity-40" />
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-background/95 to-muted/30" />
+      <div className="absolute inset-0 bg-aurora opacity-40 z-0" />
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background/95 to-muted/30 z-0" />
       
-      <div className="w-full max-w-md space-y-8 relative z-10 animate-fade-up">
+        <div className="w-full max-w-md space-y-8 relative z-50 pointer-events-auto">
         <div className="text-center">
           <img 
             src="/omit-logo.png" 
@@ -97,7 +97,7 @@ export default function Login() {
           <p className="mt-2 text-muted-foreground">Sign in to your account to continue</p>
         </div>
 
-        <div className="rounded-xl border bg-card/80 backdrop-blur-xl p-8 shadow-xl glow-border">
+        <div className="rounded-xl border bg-card p-8 shadow-xl glow-border">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -165,7 +165,7 @@ export default function Login() {
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading} onClick={() => console.log('Sign in button clicked')}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign in
               </Button>
