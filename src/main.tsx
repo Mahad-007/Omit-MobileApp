@@ -1,5 +1,15 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { GlobalError } from "./components/GlobalError";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-createRoot(document.getElementById("root")!).render(<App />);
+const queryClient = new QueryClient();
+
+createRoot(document.getElementById("root")!).render(
+  <GlobalError>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </GlobalError>
+);
