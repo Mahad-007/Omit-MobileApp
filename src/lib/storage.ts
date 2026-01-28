@@ -435,7 +435,7 @@ class LocalStorageService {
   getTodayStats(): DailyStats {
     const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
     const allStats: DailyStats[] = data ? JSON.parse(data) : [];
-    const today = new Date().toISOString().split('T')[0];
+    const today = this.getLocalDateString();
     
     let stats = allStats.find(s => s.date === today);
     if (!stats) {
@@ -483,7 +483,7 @@ class LocalStorageService {
   updateDailyStats(savedAdd: number, wastedAdd: number) {
     const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
     const allStats: DailyStats[] = data ? JSON.parse(data) : [];
-    const today = new Date().toISOString().split('T')[0];
+    const today = this.getLocalDateString();
     
     const index = allStats.findIndex(s => s.date === today);
     if (index >= 0) {
@@ -572,7 +572,7 @@ class LocalStorageService {
   resetTodayStats() {
       const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
       const allStats: DailyStats[] = data ? JSON.parse(data) : [];
-      const today = new Date().toISOString().split('T')[0];
+      const today = this.getLocalDateString();
 
       const index = allStats.findIndex(s => s.date === today);
       if (index >= 0) {
@@ -624,7 +624,10 @@ class LocalStorageService {
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart);
       date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
       
       const existingStat = allStats.find(s => s.date === dateStr);
       weeklyStats.push(existingStat || { date: dateStr, savedHours: 0, wastedHours: 0 });
