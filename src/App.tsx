@@ -27,11 +27,15 @@ import { PersistentBlockerManager } from "@/components/PersistentBlockerManager"
 import { useEffect } from "react";
 import { storage } from "@/lib/storage";
 import { useTaskNotifications } from "@/hooks/useTaskNotifications";
+import { NotificationManager } from "@/utils/notifications";
 
 const App = () => {
     useTaskNotifications();
 
     useEffect(() => {
+        // Request notification permissions
+        NotificationManager.requestPermissions();
+
         // Sync data to extension on app load
         storage.forceSync();
         

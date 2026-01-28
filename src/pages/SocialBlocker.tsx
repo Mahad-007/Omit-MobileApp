@@ -188,9 +188,8 @@ export default function SocialBlocker() {
     // We just need to start the session.
 
     // Schedule notification for when the session ends
-    if (NotificationManager.scheduleFocusEnd(focusDuration)) {
-       console.log('Notification scheduled for session end');
-    }
+    await NotificationManager.scheduleFocusEnd(focusDuration);
+    console.log('Notification scheduled for session end');
 
     storage.startFocusSession(focusDuration);
     setFocusModeActive(true);

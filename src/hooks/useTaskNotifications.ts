@@ -11,8 +11,8 @@ export function useTaskNotifications() {
     if (!settings.taskReminders) return;
 
     const scheduleNotifications = async () => {
-      // 1. Request permissions if not granted (optional, or rely on user action elsewhere)
-      // For now, we assume permission is requested elsewhere or we try quietly.
+      // 1. Request permissions
+      await NotificationManager.requestPermissions();
       
       // 2. Filter for future tasks
       const now = Date.now();
