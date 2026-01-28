@@ -115,19 +115,19 @@ export default function Settings() {
                 onCheckedChange={(checked) => handleSettingChange('strictMode', checked)}
               />
             </div>
-            <div className="p-4">
+            <div className="p-4 border-b border-border/30">
               <div className="flex items-center gap-3 mb-4">
                 <div className="size-10 rounded-xl bg-highlight/15 flex items-center justify-center">
                   <span className="material-symbols-outlined text-highlight">timer</span>
                 </div>
                 <p className="text-foreground text-sm font-semibold">Default Focus Duration</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {[15, 25, 45, 60, 90].map((mins) => (
                   <button
                     key={mins}
                     onClick={() => handleSettingChange('defaultFocusDuration', mins)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    className={`flex-1 min-w-[60px] py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                       settings.defaultFocusDuration === mins 
                         ? 'text-white shadow-lg' 
                         : 'bg-muted text-muted-foreground hover:bg-accent'
@@ -137,7 +137,79 @@ export default function Settings() {
                     {mins}m
                   </button>
                 ))}
+                <button
+                  onClick={() => {
+                    const custom = window.prompt("Enter custom duration in minutes:", settings.defaultFocusDuration.toString());
+                    if (custom && !isNaN(parseInt(custom))) {
+                      handleSettingChange('defaultFocusDuration', parseInt(custom));
+                    }
+                  }}
+                  className={`flex-1 min-w-[80px] py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    ![15, 25, 45, 60, 90].includes(settings.defaultFocusDuration)
+                      ? 'text-white shadow-lg' 
+                      : 'bg-muted text-muted-foreground hover:bg-accent'
+                  }`}
+                  style={![15, 25, 45, 60, 90].includes(settings.defaultFocusDuration) ? { background: 'var(--gradient-primary)' } : {}}
+                >
+                  {![15, 25, 45, 60, 90].includes(settings.defaultFocusDuration) ? `${settings.defaultFocusDuration}m` : 'Custom'}
+                </button>
               </div>
+            </div>
+
+            {/* Daily Limit Settings */}
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-primary">block</span>
+                  </div>
+                  <div>
+                    <p className="text-foreground text-sm font-semibold">Daily Time Limit</p>
+                    <p className="text-muted-foreground text-xs">Total app usage per day</p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={settings.dailyTimeLimitEnabled}
+                  onCheckedChange={(checked) => handleSettingChange('dailyTimeLimitEnabled', checked)}
+                />
+              </div>
+              
+              {settings.dailyTimeLimitEnabled && (
+                <div className="space-y-4 animate-in slide-in-from-top-1 duration-200">
+                  <div className="flex flex-wrap gap-2">
+                    {[30, 60, 120, 180, 300].map((mins) => (
+                      <button
+                        key={mins}
+                        onClick={() => handleSettingChange('dailyTimeLimitMinutes', mins)}
+                        className={`flex-1 min-w-[70px] py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                          settings.dailyTimeLimitMinutes === mins 
+                            ? 'text-white shadow-md' 
+                            : 'bg-muted text-muted-foreground hover:bg-accent'
+                        }`}
+                        style={settings.dailyTimeLimitMinutes === mins ? { background: 'var(--gradient-primary)' } : {}}
+                      >
+                        {mins >= 60 ? `${mins/60}h` : `${mins}m`}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const custom = window.prompt("Enter daily limit in minutes:", settings.dailyTimeLimitMinutes.toString());
+                        if (custom && !isNaN(parseInt(custom))) {
+                          handleSettingChange('dailyTimeLimitMinutes', parseInt(custom));
+                        }
+                      }}
+                      className={`flex-1 min-w-[70px] py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                        ![30, 60, 120, 180, 300].includes(settings.dailyTimeLimitMinutes)
+                          ? 'text-white shadow-md' 
+                          : 'bg-muted text-muted-foreground hover:bg-accent'
+                      }`}
+                      style={![30, 60, 120, 180, 300].includes(settings.dailyTimeLimitMinutes) ? { background: 'var(--gradient-primary)' } : {}}
+                    >
+                      {![30, 60, 120, 180, 300].includes(settings.dailyTimeLimitMinutes) ? `${Math.floor(settings.dailyTimeLimitMinutes/60)}h ${settings.dailyTimeLimitMinutes%60}m` : 'Custom'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>

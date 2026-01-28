@@ -5,6 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTasks, useBlockedApps } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import AppBlocker, { isCapacitor, AppInfo, PermissionStatus } from "@/lib/app-blocker";
+
+interface InstalledAppWithStatus extends AppInfo {
+  blockMode: 'off' | 'session' | 'persistent';
+}
 
 // App icons mapping
 const appIcons: Record<string, { icon: string; color: string }> = {
@@ -32,6 +37,56 @@ export default function Dashboard() {
   const [dailyUsage, setDailyUsage] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [totalSessionTime, setTotalSessionTime] = useState(0);
+  const [permissions, setPermissions] = useState<PermissionStatus | null>(null);
+  const [installedApps, setInstalledApps] = useState<InstalledAppWithStatus[]>([]);
+
+  const onAndroid = isCapacitor();
+
+  // Check permissions on Android
+  const checkPermissions = async () => {
+    if (onAndroid) {
+      try {
+        const status = await AppBlocker.checkPermissions();
+        setPermissions(status);
+      } catch (error) {
+        console.error("Failed to check permissions:", error);
+      }
+    }
+  };
+
+  // Load installed apps from the device
+  const loadInstalledApps = async () => {
+    if (!onAndroid) return;
+    try {
+      const { apps } = await AppBlocker.getInstalledApps();
+      const sessionApps = storage.getAndroidSessionApps();
+      const persistentApps = storage.getAndroidPersistentApps();
+      
+      const appsWithStatus = apps.map((app: AppInfo) => {
+        let mode: 'off' | 'session' | 'persistent' = 'off';
+        if (persistentApps.includes(app.packageName)) mode = 'persistent';
+        else if (sessionApps.includes(app.packageName)) mode = 'session';
+        
+        return {
+          ...app,
+          blockMode: mode
+        };
+      });
+      
+      // Sort: blocked apps first (persistent then session), then alphabetically
+      appsWithStatus.sort((a: InstalledAppWithStatus, b: InstalledAppWithStatus) => {
+        const scoreA = a.blockMode === 'persistent' ? 2 : (a.blockMode === 'session' ? 1 : 0);
+        const scoreB = b.blockMode === 'persistent' ? 2 : (b.blockMode === 'session' ? 1 : 0);
+        
+        if (scoreA !== scoreB) return scoreB - scoreA;
+        return a.appName.localeCompare(b.appName);
+      });
+      
+      setInstalledApps(appsWithStatus);
+    } catch (error) {
+      console.error("Failed to load installed apps:", error);
+    }
+  };
 
   const loadLocalData = useCallback(() => {
     // Settings & Stats still local for now - explicitly separate concerns
@@ -55,9 +110,20 @@ export default function Dashboard() {
   useEffect(() => {
     loadLocalData();
 
+    // Check permissions and load installed apps on Android
+    if (onAndroid) {
+      checkPermissions();
+      loadInstalledApps();
+    }
+
     // Only subscribe to settings/stats changes from storage
     const unsubscribeStats = storage.onChange('stats', loadLocalData);
     const unsubscribeSettings = storage.onChange('settings', loadLocalData);
+    
+    // Subscribe to storage changes for blocked apps to keep quick actions in sync
+    const unsubscribeApps = storage.onChange('blockedApps', () => {
+      loadInstalledApps();
+    });
     
     // Timer countdown when session is active
     const interval = setInterval(() => {
@@ -74,9 +140,10 @@ export default function Dashboard() {
     return () => {
       unsubscribeStats();
       unsubscribeSettings();
+      unsubscribeApps();
       clearInterval(interval);
     };
-  }, [loadLocalData]);
+  }, [loadLocalData, onAndroid]);
 
   const toggleApp = async (id: string) => {
     const app = blockedApps.find(a => a.id === id);
@@ -136,211 +203,173 @@ export default function Dashboard() {
       <div className="absolute bottom-48 left-0 w-64 h-64 bg-highlight/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header Section */}
-      <header className="relative flex items-start bg-transparent pt-14 px-6 pb-4 justify-between animate-fade-up">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-primary">
-            <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
-              {greetingIcon}
-            </span>
-            <p className="font-semibold text-xs tracking-widest uppercase">
-              {dateStr}
-            </p>
-          </div>
-          <h1 className="text-foreground text-3xl font-bold leading-tight tracking-tight">
-            {greeting},
-            <br />
-            <span className="gradient-text">{displayName}</span>
+      <header className="relative flex items-center bg-transparent pt-14 px-6 pb-6 justify-between animate-fade-up z-10">
+        <div className="flex flex-col">
+          <p className="text-primary font-bold text-xs uppercase tracking-widest mb-1 flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">{greetingIcon}</span>
+            {dateStr}
+          </p>
+          <h1 className="text-foreground text-3xl font-bold tracking-tight">
+            {greeting}, <span className="gradient-text">{displayName}</span>
           </h1>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Focus Status Badge */}
-          {focusModeActive && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-highlight/20 border border-highlight/30">
-              <div className="size-2 rounded-full bg-highlight animate-subtle-pulse" />
-              <span className="text-highlight text-[10px] font-bold uppercase tracking-wider">Focusing</span>
-            </div>
-          )}
-          <button 
-            onClick={() => navigate('/settings')}
-            className="flex items-center justify-center rounded-2xl h-12 w-12 bg-card text-foreground hover:bg-accent transition-all border border-border/50 hover-lift press-effect"
-          >
-            <span className="material-symbols-outlined">settings</span>
-          </button>
+        
+        <div className="flex items-center gap-3">
+           {focusModeActive && (
+             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-highlight/10 border border-highlight/20 animate-fade-in">
+               <div className="size-2 rounded-full bg-highlight animate-subtle-pulse" />
+               <span className="text-highlight text-[10px] font-bold uppercase tracking-wider">Focus Active</span>
+             </div>
+           )}
+           <button 
+             onClick={() => navigate('/settings')}
+             className="touch-target-44 rounded-2xl bg-card/50 text-foreground hover:bg-card transition-all border border-border/50 hover-lift active:scale-95"
+             aria-label="Settings"
+           >
+             <span className="material-symbols-outlined">settings</span>
+           </button>
         </div>
       </header>
 
       {/* ===== FOCUS STATUS HERO CARD ===== */}
-      <section className="px-6 mb-6 animate-fade-up stagger-1">
+      <section className="px-6 mb-8 animate-fade-up stagger-1 z-10 relative">
         <div 
           className={cn(
-            "relative overflow-hidden rounded-3xl p-6 border transition-all",
+            "relative overflow-hidden rounded-[2rem] p-6 border transition-all duration-500",
             focusModeActive 
-              ? "bg-gradient-to-br from-highlight/20 via-card to-card border-highlight/30" 
-              : "bg-gradient-to-br from-primary/20 via-card to-card border-primary/30 glow-border"
+              ? "bg-gradient-to-br from-highlight/10 via-card to-card border-highlight/30 shadow-glow" 
+              : "bg-gradient-to-br from-primary/10 via-card to-card border-primary/20 shadow-lg"
           )}
         >
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="relative z-10 flex flex-col items-center text-center gap-4">
-            {/* Shield/Timer Icon */}
-            <div className={cn(
-              "size-20 rounded-3xl flex items-center justify-center transition-all",
-              focusModeActive 
-                ? "bg-highlight/20 shadow-[0_0_40px_hsla(38,92%,50%,0.3)]" 
-                : "bg-primary/20 shadow-[0_0_40px_hsla(258,85%,65%,0.3)]"
-            )}>
-              <span 
-                className={cn(
-                  "material-symbols-outlined text-4xl",
-                  focusModeActive ? "text-highlight" : "text-primary"
-                )}
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                {focusModeActive ? 'timer' : 'shield'}
-              </span>
-            </div>
-
-            {/* Status Text */}
+          <div className="relative z-10 flex flex-col items-center text-center gap-6">
+            
+            {/* Status Display */}
             {focusModeActive ? (
-              <>
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-5xl font-bold tracking-tight focus-timer-display text-foreground">
-                    {formatTime(timeRemaining)}
-                  </span>
-                  <span className="text-muted-foreground text-sm font-medium">remaining in session</span>
+              <div className="flex flex-col items-center gap-2 w-full">
+                <div className="flex flex-col items-center">
+                    <span className="text-6xl font-light tracking-tighter focus-timer-display text-foreground animate-breathe">
+                        {formatTime(timeRemaining)}
+                    </span>
+                    <span className="text-muted-foreground text-sm font-medium uppercase tracking-widest mt-1">Remaining</span>
                 </div>
                 
                 {/* Progress Bar */}
-                <div className="w-full max-w-xs">
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div className="w-full max-w-[240px] mt-4">
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                     <div 
-                      className="h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r from-highlight to-orange-400" 
+                      className="h-full rounded-full transition-all duration-1000 ease-linear bg-highlight" 
                       style={{ width: `${sessionProgress}%` }}
                     />
                   </div>
-                  <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                    <span>{enabledApps.length} apps blocked</span>
-                    <span>{sessionProgress}% complete</span>
-                  </div>
                 </div>
-              </>
+              </div>
             ) : (
-              <>
-                <div className="flex flex-col items-center gap-1">
-                  <h2 className="text-2xl font-bold text-foreground">Ready to Focus</h2>
-                  <p className="text-muted-foreground text-sm">
-                    {enabledApps.length > 0 
-                      ? `${enabledApps.length} apps ready to block` 
-                      : 'Configure apps to block'}
-                  </p>
-                </div>
-              </>
+              <div className="flex flex-col items-center gap-2 py-4">
+                 <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
+                    <span className="material-symbols-outlined text-3xl text-primary">shield</span>
+                 </div>
+                 <h2 className="text-2xl font-bold text-foreground">Ready to Focus?</h2>
+                 <p className="text-muted-foreground text-sm max-w-[200px] leading-relaxed">
+                   {enabledApps.length} apps protected from distractions
+                 </p>
+              </div>
             )}
 
             {/* CTA Button */}
             <button 
               onClick={handleStartFocus}
               className={cn(
-                "flex items-center justify-center gap-2 rounded-2xl h-14 px-8 text-white font-bold text-base press-effect transition-all",
-                focusModeActive ? "mt-2" : "mt-4"
+                "w-full max-w-sm h-14 rounded-2xl text-white font-semibold text-lg hover-lift active:scale-95 flex items-center justify-center gap-2 transition-all",
+                focusModeActive ? "bg-highlight shadow-glow" : "bg-primary shadow-lg hover:shadow-primary/25"
               )}
-              style={{ 
-                background: focusModeActive ? 'var(--gradient-accent)' : 'var(--gradient-primary)',
-                boxShadow: focusModeActive ? '0 0 30px hsla(38, 92%, 50%, 0.4)' : 'var(--shadow-glow-lg)'
-              }}
             >
-              <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+              <span className="material-symbols-outlined text-2xl">
                 {focusModeActive ? 'visibility' : 'play_arrow'}
               </span>
-              <span>{focusModeActive ? 'View Session' : 'Start Focus Session'}</span>
+              <span>{focusModeActive ? 'View Details' : 'Start Session'}</span>
             </button>
           </div>
         </div>
       </section>
 
       {/* ===== BLOCKED APPS QUICK ACCESS ===== */}
-      <section className="px-6 mb-6 animate-fade-up stagger-2">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-lg">block</span>
-            <h3 className="text-foreground text-sm font-bold">Blocked Apps</h3>
+      {(!onAndroid || (onAndroid && permissions?.allGranted)) && (
+        <section className="px-6 mb-8 animate-fade-up stagger-2">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-foreground text-sm font-bold flex items-center gap-2">
+               <span className="material-symbols-outlined text-primary text-lg">apps</span>
+               Quick Toggle
+            </h3>
+            <button 
+              onClick={() => navigate('/blocker')}
+              className="text-primary text-sm font-medium hover:text-primary/80 transition-colors p-2"
+            >
+              Manage All
+            </button>
           </div>
-          <button 
-            onClick={() => navigate('/blocker')}
-            className="text-primary text-xs font-semibold hover:underline"
-          >
-            Manage All →
-          </button>
-        </div>
-        
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-          {blockedApps.slice(0, 5).map((app) => {
-            const iconData = appIcons[app.url] || { icon: 'block', color: 'bg-muted' };
-            return (
-              <button
-                key={app.id}
-                onClick={() => toggleApp(app.id)}
-                className={cn(
-                  "flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all min-w-[72px] press-effect",
-                  app.isEnabled 
-                    ? "bg-primary/10 border-primary/30" 
-                    : "bg-card/60 border-border/50 opacity-60"
-                )}
-              >
-                <div className={cn(
-                  "size-12 rounded-xl flex items-center justify-center shadow-lg relative",
-                  iconData.color
-                )}>
-                  <span className="material-symbols-outlined text-white text-xl">
-                    {iconData.icon}
-                  </span>
-                  {app.isEnabled && (
-                    <div className="absolute -top-1 -right-1 size-4 rounded-full bg-primary flex items-center justify-center">
-                      <span className="material-symbols-outlined text-white text-[10px]">check</span>
-                    </div>
-                  )}
-                </div>
-                <span className="text-[10px] font-semibold text-foreground/80 truncate max-w-[60px]">
-                  {app.name}
-                </span>
-              </button>
-            );
-          })}
           
-          {/* Add More Button */}
-          <button
-            onClick={() => navigate('/blocker')}
-            className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border border-dashed border-border/50 bg-card/30 min-w-[72px] hover:bg-card/60 transition-all"
-          >
-            <div className="size-12 rounded-xl bg-muted/50 flex items-center justify-center">
-              <span className="material-symbols-outlined text-muted-foreground text-xl">add</span>
-            </div>
-            <span className="text-[10px] font-semibold text-muted-foreground">Add</span>
-          </button>
-        </div>
-      </section>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-6 px-6">
+            {blockedApps.slice(0, 5).map((app) => {
+              const iconData = appIcons[app.url] || { icon: 'block', color: 'bg-muted' };
+              return (
+                <button
+                  key={app.id}
+                  onClick={() => toggleApp(app.id)}
+                  className={cn(
+                    "flex flex-col items-center gap-3 min-w-[80px] group transition-all duration-300",
+                    app.isEnabled ? "opacity-100" : "opacity-60 grayscale-[0.5]"
+                  )}
+                >
+                  <div className={cn(
+                    "size-14 rounded-2xl flex items-center justify-center shadow-sm relative transition-all group-hover:-translate-y-1 group-active:scale-95",
+                    iconData.color
+                  )}>
+                    <span className="material-symbols-outlined text-white text-2xl">
+                      {iconData.icon}
+                    </span>
+                    {app.isEnabled && (
+                      <div className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-background flex items-center justify-center border border-border">
+                           <div className="size-3 rounded-full bg-primary" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium text-foreground/90 truncate max-w-[76px] text-center">
+                    {app.name}
+                  </span>
+                </button>
+              );
+            })}
+            
+            {/* Add More Button */}
+            <button
+              onClick={() => navigate('/blocker')}
+              className="flex flex-col items-center gap-3 min-w-[80px] group"
+            >
+              <div className="size-14 rounded-2xl bg-card border-2 border-dashed border-border flex items-center justify-center group-hover:border-primary/50 group-active:scale-95 transition-all">
+                <span className="material-symbols-outlined text-muted-foreground text-2xl">add</span>
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">Add App</span>
+            </button>
+          </div>
+        </section>
+      )}
 
-      {/* ===== FOCUS STATS OVERVIEW ===== */}
-      <section className="flex gap-4 px-6 mb-6 animate-fade-up stagger-3">
-        <div className="flex-1 flex flex-col gap-3 rounded-2xl p-5 border border-border/50 bg-card zen-card-shadow">
-          <div className="flex items-center gap-2">
-            <div className="size-8 rounded-xl bg-primary/15 flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-lg">hourglass_empty</span>
+      {/* ===== STATS ROW ===== */}
+      <section className="px-6 mb-8 animate-fade-up stagger-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-card border border-border/50 rounded-2xl p-5 flex flex-col gap-1 shadow-sm">
+                <span className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Focus Time</span>
+                <p className="text-3xl font-bold text-foreground">
+                    {focusHours.toFixed(1)} <span className="text-sm font-medium text-muted-foreground">h</span>
+                </p>
             </div>
-            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest">Focus Time</p>
-          </div>
-          <p className="text-foreground text-3xl font-bold">{focusHours.toFixed(1)}<span className="text-lg text-muted-foreground font-medium ml-1">hrs</span></p>
-        </div>
-        <div className="flex-1 flex flex-col gap-3 rounded-2xl p-5 border border-border/50 bg-card zen-card-shadow">
-          <div className="flex items-center gap-2">
-            <div className="size-8 rounded-xl bg-highlight/15 flex items-center justify-center">
-              <span className="material-symbols-outlined text-highlight text-lg">shield</span>
+            <div className="bg-card border border-border/50 rounded-2xl p-5 flex flex-col gap-1 shadow-sm">
+                <span className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Protected</span>
+                <p className="text-3xl font-bold text-foreground">
+                    {enabledApps.length} <span className="text-sm font-medium text-muted-foreground">apps</span>
+                </p>
             </div>
-            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest">Protected</p>
           </div>
-          <p className="text-foreground text-3xl font-bold">{enabledApps.length}<span className="text-lg text-muted-foreground font-medium ml-1">apps</span></p>
-        </div>
       </section>
 
       {/* ===== CURRENT TASK (Secondary) ===== */}

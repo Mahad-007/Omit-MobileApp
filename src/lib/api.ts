@@ -27,7 +27,7 @@ export const api = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data as Task[];
+    return (data || []) as Task[];
   },
 
   createTask: async (task: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
@@ -72,14 +72,20 @@ export const api = {
       .select('*');
 
     if (error) throw error;
-    return data as BlockedApp[];
+    
+    // Map snake_case to camelCase
+    return (data || []).map((app: any) => ({
+      ...app,
+      isEnabled: app.blocked ?? app.is_enabled ?? false, // Prefer blocked, fallback to is_enabled just in case
+      blockMode: app.block_mode ?? app.blockMode ?? 'focus',
+    })) as BlockedApp[];
   },
 
   toggleBlockedApp: async (id: string, blocked: boolean) => {
-    // Note: Schema uses 'is_enabled' or 'blocked' - mapping needed
+    // Note: Schema uses 'blocked' column
     const { data, error } = await supabase
       .from('blocked_apps')
-      .update({ is_enabled: blocked }) // Adapting to new schema logic
+      .update({ blocked: blocked }) 
       .eq('id', id)
       .select()
       .single();
@@ -92,14 +98,31 @@ export const api = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
+    // Map camelCase to snake_case for DB
+    const dbApp = {
+      name: app.name,
+      url: app.url, 
+      blocked: app.isEnabled, // Map isEnabled to blocked column
+      block_mode: app.blockMode,
+      icon: app.icon,
+      user_id: user.id
+    };
+
     const { data, error } = await supabase
       .from('blocked_apps')
-      .insert({ ...app, user_id: user.id } as any)
+      .insert(dbApp)
       .select()
       .single();
 
     if (error) throw error;
-    return data as BlockedApp;
+    
+    // Map response back
+    const result = data as any;
+    return {
+      ...result,
+      isEnabled: result.blocked ?? result.is_enabled ?? false,
+      blockMode: result.block_mode ?? result.blockMode ?? 'focus',
+    } as BlockedApp;
   },
 
   // Focus Sessions
@@ -123,7 +146,7 @@ export const api = {
       .select('*'); // Aggregate logic usually server-side or computed on client
     
      if(error) throw error;
-     return data as FocusSession[];
+     return (data || []) as FocusSession[];
   }
 };
 

@@ -200,36 +200,44 @@
    ============================================ */
 
 @layer utilities {
-  /* Safe area utilities */
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
+   /* Safe area utilities */
+   .safe-area-bottom {
+     padding-bottom: env(safe-area-inset-bottom, 24px);
+   }
+ 
+   .safe-area-top {
+     padding-top: env(safe-area-inset-top, 0);
+   }
+ 
+   /* Custom scrollbar hiding */
+   .no-scrollbar::-webkit-scrollbar {
+     display: none;
+   }
+   .no-scrollbar {
+     -ms-overflow-style: none;
+     scrollbar-width: none;
+   }
+ 
+   /* Touch Targets */
+   .touch-target-44 {
+     min-height: 44px;
+     min-width: 44px;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+   }
 
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top, 0);
-  }
-
-  /* Custom scrollbar hiding */
-  .no-scrollbar::-webkit-scrollbar {
-    width: 0;
-    background: transparent;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  /* Responsive icon sizing */
-  .icon-responsive {
-    @apply w-5 h-5;
-  }
-  .icon-responsive-sm {
-    @apply w-4 h-4;
-  }
-  .icon-responsive-lg {
-    @apply w-6 h-6;
-  }
-}
+   /* Responsive icon sizing */
+   .icon-responsive {
+     @apply w-5 h-5;
+   }
+   .icon-responsive-sm {
+     @apply w-4 h-4;
+   }
+   .icon-responsive-lg {
+     @apply w-6 h-6;
+   }
+ }
 
 /* Responsive icon sizes */
 @media (min-width: 360px) {
