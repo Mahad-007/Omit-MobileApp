@@ -27,33 +27,63 @@ export const api = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return (data || []) as Task[];
+    
+    return (data || []).map((task: any) => ({
+      ...task,
+      dueDate: task.due_date,
+      createdAt: task.created_at,
+    })) as Task[];
   },
 
   createTask: async (task: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
+    const dbTask = {
+      title: task.title,
+      description: task.description,
+      due_date: task.dueDate,
+      priority: task.priority,
+      user_id: user.id
+    };
+
     const { data, error } = await supabase
       .from('tasks')
-      .insert({ ...task, user_id: user.id } as any)
+      .insert(dbTask)
       .select()
       .single();
 
     if (error) throw error;
-    return data as Task;
+    
+    return {
+      ...data,
+      dueDate: data.due_date,
+      createdAt: data.created_at,
+    } as Task;
   },
 
   updateTask: async (taskId: string, updates: Partial<Task>) => {
+    const dbUpdates: any = { ...updates };
+    
+    if (updates.dueDate !== undefined) {
+      dbUpdates.due_date = updates.dueDate;
+      delete dbUpdates.dueDate;
+    }
+    
     const { data, error } = await supabase
       .from('tasks')
-      .update(updates as any)
+      .update(dbUpdates)
       .eq('id', taskId)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      ...data,
+      dueDate: data.due_date,
+      createdAt: data.created_at,
+    };
   },
 
   deleteTask: async (taskId: string) => {

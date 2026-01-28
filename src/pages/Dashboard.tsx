@@ -6,6 +6,8 @@ import { useTasks, useBlockedApps } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import AppBlocker, { isCapacitor, AppInfo, PermissionStatus } from "@/lib/app-blocker";
+import QuickAddTaskModal from "@/components/QuickAddTaskModal";
+import { Task } from "@/lib/storage";
 
 interface InstalledAppWithStatus extends AppInfo {
   blockMode: 'off' | 'session' | 'persistent';
@@ -28,8 +30,10 @@ export default function Dashboard() {
   const { user } = useAuth();
   
   // Data from React Query
-  const { data: tasks = [] } = useTasks();
+  const { data: tasks = [], createTask } = useTasks();
   const { data: blockedApps = [], toggle } = useBlockedApps();
+  
+  const [showAddModal, setShowAddModal] = useState(false);
   
   const [focusHours, setFocusHours] = useState(0);
   const [focusModeActive, setFocusModeActive] = useState(false);
@@ -152,6 +156,15 @@ export default function Dashboard() {
       await toggle.mutateAsync({ id, blocked: !app.isEnabled });
     } catch (error) {
       toast.error("Failed to toggle app");
+    }
+  };
+
+  const handleAddTask = async (newTask: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
+    try {
+      await createTask.mutateAsync(newTask);
+      toast.success("Task added");
+    } catch (error) {
+      toast.error("Failed to create task");
     }
   };
   
@@ -373,8 +386,8 @@ export default function Dashboard() {
       </section>
 
       {/* ===== CURRENT TASK (Secondary) ===== */}
-      {priorityTask && (
-        <section className="px-6 mb-6 animate-fade-up stagger-4">
+      <section className="px-6 mb-6 animate-fade-up stagger-4">
+        {priorityTask ? (
           <div className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-card">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
@@ -385,16 +398,38 @@ export default function Dashboard() {
                 <p className="text-foreground text-sm font-semibold truncate">{priorityTask.title}</p>
               </div>
             </div>
-            <button 
-              onClick={() => navigate('/tasks')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all shrink-0"
-            >
-              <span>{remainingTasks} left</span>
-              <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-all shrink-0"
+                aria-label="Add Task"
+              >
+                <span className="material-symbols-outlined text-lg">add</span>
+              </button>
+              <button 
+                onClick={() => navigate('/tasks')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all shrink-0"
+              >
+                <span>{remainingTasks} left</span>
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            </div>
           </div>
-        </section>
-      )}
+        ) : (
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="w-full flex items-center justify-center gap-3 p-6 rounded-[2rem] border-2 border-dashed border-border/40 bg-card/30 hover:bg-card/50 hover:border-primary/30 transition-all group"
+          >
+            <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-primary text-2xl">add_task</span>
+            </div>
+            <div className="text-left">
+              <p className="text-foreground font-bold text-lg">Add your first task</p>
+              <p className="text-muted-foreground text-sm">Stay focused and organized</p>
+            </div>
+          </button>
+        )}
+      </section>
 
       {/* ===== DAILY PROGRESS (Tertiary) ===== */}
       <section className="px-6 mb-10 animate-fade-up stagger-5">
@@ -414,6 +449,13 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      {/* Quick Add Modal */}
+      <QuickAddTaskModal 
+        isOpen={showAddModal} 
+        onClose={() => setShowAddModal(false)}
+        onAddTask={handleAddTask}
+      />
     </div>
   );
 }

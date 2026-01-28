@@ -132,7 +132,7 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
         <div className="w-full bg-card rounded-xl shadow-[0px_20px_50px_rgba(0,0,0,0.5)] border border-border">
           {/* Headline Text & Input */}
           <div className="p-6">
-            <h1 className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-4">Quick Add Task</h1>
+            <h1 className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-4">Quick Add Task or Reminder</h1>
             <div className="flex flex-col gap-4">
               <textarea 
                 autoFocus
@@ -188,7 +188,7 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
               disabled={!title.trim()}
               className="flex min-w-[100px] cursor-pointer items-center justify-center rounded-lg h-10 px-6 bg-primary text-white text-sm font-bold tracking-wide shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>Save Task</span>
+              <span>Save</span>
             </button>
           </div>
         </div>

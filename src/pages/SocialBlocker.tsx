@@ -8,6 +8,7 @@ import AppBlocker, { isCapacitor, AppInfo, PermissionStatus } from "@/lib/app-bl
 import { Switch } from "@/components/ui/switch";
 import { NotificationManager } from "@/utils/notifications";
 import { cn } from "@/lib/utils";
+import CustomTimeModal from "@/components/CustomTimeModal";
 
 interface InstalledAppWithStatus extends AppInfo {
   blockMode: 'off' | 'session' | 'persistent';
@@ -55,12 +56,12 @@ export default function SocialBlocker() {
   const navigate = useNavigate();
   const { data: apps = [], toggle } = useBlockedApps();
   const [settings, setSettings] = useState<Settings>(storage.getSettings());
-  const [searchQuery, setSearchQuery] = useState('');
   const [focusDuration, setFocusDuration] = useState(25);
   const [focusModeActive, setFocusModeActive] = useState(false);
   const [dailyUsage, setDailyUsage] = useState(0);
   const [permissions, setPermissions] = useState<PermissionStatus | null>(null);
   const [installedApps, setInstalledApps] = useState<InstalledAppWithStatus[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Check permissions on Android
   const checkPermissions = async () => {
@@ -210,8 +211,7 @@ export default function SocialBlocker() {
   const getAppsByCategory = (category: string) => {
     const categoryApps = defaultApps.find(c => c.category === category)?.apps || [];
     return apps.filter(app => 
-      categoryApps.some(ca => ca.url === app.url) &&
-      (searchQuery === '' || app.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      categoryApps.some(ca => ca.url === app.url)
     );
   };
 
@@ -251,61 +251,7 @@ export default function SocialBlocker() {
           <h1 className="text-base font-bold tracking-tight text-center flex-1 pr-10">App Blocker</h1>
         </div>
 
-        {/* Daily Limit Status */}
-        {settings.dailyTimeLimitEnabled && (
-          <div className="px-4 pb-4 animate-fade-in">
-             <div 
-               onClick={() => {
-                 const custom = window.prompt("Adjust Daily Limit (minutes):", settings.dailyTimeLimitMinutes.toString());
-                 if (custom && !isNaN(parseInt(custom))) {
-                   const newSettings = { ...settings, dailyTimeLimitMinutes: parseInt(custom) };
-                   setSettings(newSettings);
-                   storage.saveSettings(newSettings);
-                   toast.success("Daily limit updated!");
-                 }
-               }}
-               className={`p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all ${
-                isTimeLimitExceeded 
-                  ? 'bg-destructive/5 border border-destructive/20' 
-                  : 'bg-primary/5 border border-primary/20'
-              }`}
-             >
-                <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${
-                  isTimeLimitExceeded ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
-                }`}>
-                  <span className="material-symbols-outlined">
-                    {isTimeLimitExceeded ? 'block' : 'timer'}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className={`text-sm font-bold ${isTimeLimitExceeded ? 'text-destructive' : 'text-foreground'}`}>
-                      {isTimeLimitExceeded ? 'Limit Reached' : 'Daily Limit'}
-                    </p>
-                    <span className="material-symbols-outlined text-xs text-muted-foreground/50">edit</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {isTimeLimitExceeded ? 'Apps Blocked' : `${formatTime(remainingTime)} left • Used ${formatTime(dailyUsage)}`}
-                  </p>
-                </div>
-             </div>
-          </div>
-        )}
 
-        {/* Search Bar */}
-        <div className="px-4 pb-4">
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-              <span className="material-symbols-outlined text-[20px]">search</span>
-            </div>
-            <input 
-              className="flex w-full h-12 rounded-xl border border-border bg-card/50 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
-              placeholder="Search apps by name..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
       </header>
 
       <main className="flex-1 px-4 space-y-6 pt-2">
@@ -458,20 +404,15 @@ export default function SocialBlocker() {
                 </button>
               ))}
               <button
-                onClick={() => {
-                  const custom = window.prompt("Enter custom duration in minutes:", focusDuration.toString());
-                  if (custom && !isNaN(parseInt(custom))) {
-                    setFocusDuration(parseInt(custom));
-                  }
-                }}
+                onClick={() => setIsModalOpen(true)}
                 className={cn(
-                  "h-12 rounded-xl text-sm font-semibold transition-all duration-200 border",
+                  "flex-1 min-w-[70px] py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 border",
                   ![15, 25, 45, 60, 90].includes(focusDuration)
                     ? "bg-primary text-primary-foreground border-primary/50 shadow-md transform scale-105" 
-                    : "bg-background text-muted-foreground border-transparent hover:bg-accent"
+                    : "bg-muted text-muted-foreground border-transparent hover:bg-accent"
                 )}
               >
-                {![15, 25, 45, 60, 90].includes(focusDuration) ? focusDuration : 'Custom'}
+                {![15, 25, 45, 60, 90].includes(focusDuration) ? `${focusDuration}` : 'Custom'}
               </button>
             </div>
             <p className="text-center text-xs text-muted-foreground font-medium mt-1">minutes</p>
@@ -552,6 +493,14 @@ export default function SocialBlocker() {
           </button>
         </div>
       </div>
+
+      <CustomTimeModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={(mins) => setFocusDuration(mins)}
+        initialValue={focusDuration}
+        title="Custom Duration"
+      />
     </div>
   );
 }
