@@ -10,6 +10,7 @@ interface QuickAddTaskModalProps {
 export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickAddTaskModalProps) {
   const [title, setTitle] = useState('');
   const [customDate, setCustomDate] = useState<string>('');
+  const [customTime, setCustomTime] = useState<string>('09:00');
   const [selectedDateOption, setSelectedDateOption] = useState<'today' | 'tomorrow' | 'next_week' | 'custom'>('today');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -29,19 +30,27 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
   if (!isOpen) return null;
 
   const getDateString = (option: 'today' | 'tomorrow' | 'next_week' | 'custom') => {
+    const getLocalISODate = (date: Date) => {
+      const offset = date.getTimezoneOffset();
+      const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+      return localDate.toISOString().split('T')[0];
+    };
+
     const now = new Date();
     if (option === 'today') {
-      return now.toISOString().split('T')[0];
+      return getLocalISODate(now) + 'T09:00:00';
     } else if (option === 'tomorrow') {
-      now.setDate(now.getDate() + 1);
-      return now.toISOString().split('T')[0];
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return getLocalISODate(tomorrow) + 'T09:00:00';
     } else if (option === 'next_week') {
-      now.setDate(now.getDate() + 7);
-      return now.toISOString().split('T')[0];
+      const nextWeek = new Date(now);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      return getLocalISODate(nextWeek) + 'T09:00:00';
     } else if (option === 'custom' && customDate) {
-      return customDate;
+      return `${customDate}T${customTime || '09:00'}:00`;
     }
-    return now.toISOString().split('T')[0];
+    return now.toISOString();
   };
 
   const getDisplayLabel = () => {
@@ -50,7 +59,8 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
     if (selectedDateOption === 'next_week') return 'Next Week';
     if (selectedDateOption === 'custom' && customDate) {
       const date = new Date(customDate);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const timeStr = customTime ? ` at ${customTime}` : '';
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + timeStr;
     }
     return 'Today';
   };
@@ -196,11 +206,6 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
           </div>
         </div>
 
-        {/* Brand Indicator below card */}
-        <div className="mt-8 flex flex-col items-center gap-2 opacity-30 group hover:opacity-80 transition-opacity">
-          <div className="w-1 h-1 rounded-full bg-primary mb-1"></div>
-          <p className="text-[9px] font-black tracking-[0.3em] uppercase text-white/80 font-display">Zen Mastery OS</p>
-        </div>
       </div>
 
       {/* Date Picker Dropdown - Fixed overlay with premium styling */}
@@ -211,17 +216,35 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
             ref={datePickerRef}
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] bg-slate-900/90 backdrop-blur-[50px] border border-white/20 rounded-[2rem] shadow-[0px_50px_100px_rgba(0,0,0,0.7)] z-[60] overflow-hidden animate-in zoom-in-95 duration-300 ring-1 ring-white/10"
           >
-            <div className="p-6 border-b border-white/10">
-              <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4">Chronos Selection</h3>
-              <div className="relative group">
-                  <input
-                    type="date"
-                    value={customDate}
-                    onChange={handleCustomDateChange}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
-                    style={{ colorScheme: 'dark' }}
-                  />
-                  <div className="absolute inset-x-0 bottom-0 h-[2px] bg-primary scale-x-0 group-focus-within:scale-x-100 transition-transform origin-center"></div>
+            <div className="p-6 border-b border-white/10 space-y-4">
+              <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2">Chronos Selection</h3>
+              <div className="flex flex-col gap-3">
+                <div className="relative group">
+                    <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1.5 ml-1">Date</p>
+                    <input
+                      type="date"
+                      value={customDate}
+                      onChange={handleCustomDateChange}
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                      style={{ colorScheme: 'dark' }}
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-[2px] bg-primary scale-x-0 group-focus-within:scale-x-100 transition-transform origin-center"></div>
+                </div>
+
+                <div className="relative group">
+                    <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1.5 ml-1">Time</p>
+                    <input
+                      type="time"
+                      value={customTime}
+                      onChange={(e) => {
+                        setCustomTime(e.target.value);
+                        setSelectedDateOption('custom');
+                      }}
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-bold"
+                      style={{ colorScheme: 'dark' }}
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-[2px] bg-primary scale-x-0 group-focus-within:scale-x-100 transition-transform origin-center"></div>
+                </div>
               </div>
             </div>
             <div className="p-3 space-y-1">

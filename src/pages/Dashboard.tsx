@@ -395,7 +395,14 @@ export default function Dashboard() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Current Task</p>
-                <p className="text-foreground text-sm font-semibold truncate">{priorityTask.title}</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-foreground text-sm font-semibold truncate">{priorityTask.title}</p>
+                  {priorityTask.dueDate && priorityTask.dueDate.includes('T') && (
+                    <span className="text-[10px] text-primary/70 font-bold whitespace-nowrap">
+                      {new Date(priorityTask.dueDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">

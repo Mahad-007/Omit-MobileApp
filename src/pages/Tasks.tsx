@@ -117,6 +117,12 @@ export default function Tasks() {
         {task.description && (
           <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>
         )}
+        {task.dueDate && task.dueDate.includes('T') && (
+          <div className="flex items-center gap-1 mt-1 text-[10px] text-primary/70 font-bold uppercase tracking-wider">
+            <span className="material-symbols-outlined text-[12px]">schedule</span>
+            <span>{new Date(task.dueDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+          </div>
+        )}
       </div>
       
       <button
