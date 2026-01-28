@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 test_extension.py
 *.zip
+*.md
+*.py

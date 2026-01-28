@@ -15,14 +15,8 @@ export default function FocusTimer() {
   const [showTaskSelector, setShowTaskSelector] = useState(false);
 
   const finishSession = useCallback(async () => {
-    if (isCapacitor()) {
-      try {
-        await AppBlocker.stopMonitoring();
-        localStorage.setItem("android_monitoring", "false");
-      } catch (e) {
-        console.error("Failed to stop blocking", e);
-      }
-    }
+    // Android stopping logic is now handled by PersistentBlockerManager listening to session end
+    
     storage.endFocusSession();
     window.postMessage({ type: 'OMIT_SYNC_REQUEST', payload: { focusMode: false } }, '*');
     navigate('/');
@@ -219,7 +213,7 @@ export default function FocusTimer() {
             <button
               onClick={handleCompleteTask}
               disabled={!currentTaskId}
-              className="flex items-center gap-3 px-5 py-3 bg-card/60 rounded-2xl backdrop-blur-md border border-border/30 transition-all hover:bg-card/80 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group"
+              className="flex items-center gap-3 px-5 py-3 bg-card rounded-2xl border border-border/30 transition-all hover:bg-card/80 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group"
             >
               <div className={`size-6 rounded-lg flex items-center justify-center transition-colors ${
                 currentTaskId ? 'bg-primary/20 group-hover:bg-primary/30' : 'bg-muted'
@@ -241,7 +235,7 @@ export default function FocusTimer() {
             {availableTasks.length > 1 && (
               <button
                 onClick={() => setShowTaskSelector(!showTaskSelector)}
-                className="p-3 bg-card/60 rounded-xl backdrop-blur-md border border-border/30 transition-all hover:bg-card/80 active:scale-95"
+                className="p-3 bg-card rounded-xl border border-border/30 transition-all hover:bg-card/80 active:scale-95"
                 title="Switch task"
               >
                 <span className="material-symbols-outlined text-lg text-foreground/60">
@@ -253,7 +247,7 @@ export default function FocusTimer() {
           
           {/* Task Selector Dropdown */}
           {showTaskSelector && availableTasks.length > 0 && (
-            <div className="absolute top-full mt-2 w-72 max-h-60 overflow-y-auto bg-card/95 backdrop-blur-xl rounded-2xl border border-border/40 shadow-xl z-50 animate-scale-in">
+            <div className="absolute top-full mt-2 w-72 max-h-60 overflow-y-auto bg-card rounded-2xl border border-border/40 shadow-xl z-50 animate-scale-in">
               <div className="p-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold px-3 py-2">
                   Select a task
@@ -312,7 +306,7 @@ export default function FocusTimer() {
             className={`flex-1 h-14 flex items-center justify-center gap-2 rounded-2xl font-semibold text-sm transition-all ${
               strictMode
                 ? 'bg-muted/50 text-muted-foreground cursor-not-allowed border border-border/30'
-                : 'bg-card/80 border border-border/40 text-foreground active:scale-[0.98] hover:bg-card backdrop-blur-sm'
+                : 'bg-card border border-border/40 text-foreground active:scale-[0.98] hover:bg-card'
             }`}
           >
             <span className="material-symbols-outlined text-lg">
