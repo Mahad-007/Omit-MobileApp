@@ -107,7 +107,7 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
 
       {/* Modal Overlay Backdrop */}
       <div 
-        className="absolute inset-0 z-10 glass-blur bg-black/40"
+        className="absolute inset-0 z-10 bg-black/60"
         onClick={onClose}
       ></div>
 

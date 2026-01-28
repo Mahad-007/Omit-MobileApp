@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
-import { storage, Task, Settings, BlockedApp } from "@/lib/storage";
+import { storage, Settings } from "@/lib/storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { Switch } from "@/components/ui/switch";
+import { useTasks, useBlockedApps } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // App icons mapping
 const appIcons: Record<string, { icon: string; color: string }> = {
@@ -20,21 +21,23 @@ const appIcons: Record<string, { icon: string; color: string }> = {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  
+  // Data from React Query
+  const { data: tasks = [] } = useTasks();
+  const { data: blockedApps = [], toggle } = useBlockedApps();
+  
   const [focusHours, setFocusHours] = useState(0);
   const [focusModeActive, setFocusModeActive] = useState(false);
   const [settings, setSettings] = useState<Settings>(storage.getSettings());
   const [dailyUsage, setDailyUsage] = useState(0);
-  const [blockedApps, setBlockedApps] = useState<BlockedApp[]>([]);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [totalSessionTime, setTotalSessionTime] = useState(0);
 
-  const loadData = useCallback(() => {
-    setTasks(storage.getTasks());
+  const loadLocalData = useCallback(() => {
+    // Settings & Stats still local for now - explicitly separate concerns
     setFocusHours(storage.getSavedTime());
     setSettings(storage.getSettings());
     setDailyUsage(storage.getDailyAppUsage());
-    setBlockedApps(storage.getBlockedApps());
     
     const session = storage.getActiveSession();
     if (session) {
@@ -50,15 +53,11 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    loadLocalData();
 
-    const unsubscribeTasks = storage.onChange('tasks', loadData);
-    const unsubscribeStats = storage.onChange('stats', loadData);
-    const unsubscribeSettings = storage.onChange('settings', loadData);
-    const unsubscribeAll = storage.onChange('all', loadData);
-    
-    const handleStorageChange = () => loadData();
-    window.addEventListener('storage', handleStorageChange);
+    // Only subscribe to settings/stats changes from storage
+    const unsubscribeStats = storage.onChange('stats', loadLocalData);
+    const unsubscribeSettings = storage.onChange('settings', loadLocalData);
     
     // Timer countdown when session is active
     const interval = setInterval(() => {
@@ -67,81 +66,67 @@ export default function Dashboard() {
         const remaining = Math.max(0, session.endTime - Date.now());
         setTimeRemaining(Math.floor(remaining / 1000));
         if (remaining <= 0) {
-          loadData();
+          loadLocalData();
         }
       }
     }, 1000);
     
     return () => {
-      unsubscribeTasks();
       unsubscribeStats();
       unsubscribeSettings();
-      unsubscribeAll();
-      window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, [loadData]);
+  }, [loadLocalData]);
 
-  const enabledApps = blockedApps.filter(app => app.isEnabled);
-  const remainingTasks = tasks.filter(t => !t.completed).length;
-  const completedTasks = tasks.filter(t => t.completed).length;
-  const totalTasks = tasks.length;
-  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  const now = new Date();
-  const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'short', day: 'numeric' };
-  const dateStr = now.toLocaleDateString('en-US', options);
+  const toggleApp = async (id: string) => {
+    const app = blockedApps.find(a => a.id === id);
+    if (!app) return;
+    try {
+      await toggle.mutateAsync({ id, blocked: !app.isEnabled });
+    } catch (error) {
+      toast.error("Failed to toggle app");
+    }
+  };
   
-  const hour = now.getHours();
-  let greeting = 'Good morning';
-  let greetingIcon = 'light_mode';
-  if (hour >= 12 && hour < 17) {
-    greeting = 'Good afternoon';
-    greetingIcon = 'wb_sunny';
-  } else if (hour >= 17) {
-    greeting = 'Good evening';
-    greetingIcon = 'dark_mode';
-  }
+  // Logic for greeting and date
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greetingIcon = hour < 12 ? 'wb_sunny' : hour < 18 ? 'wb_twilight' : 'dark_mode';
+  
+  const dateStr = new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    month: 'long', 
+    day: 'numeric' 
+  });
 
-  const userName = user?.email?.split('@')[0] || 'there';
+  const userName = user?.email?.split('@')[0] || 'User';
   const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
-  const priorityTask = tasks.find(t => !t.completed && t.priority === 'high') || 
-                       tasks.find(t => !t.completed);
+  // Logic for tasks
+  const enabledApps = blockedApps.filter(a => a.isEnabled); // Used in JSX
+  const incompleteTasks = tasks.filter(t => !t.completed);
+  const priorityTask = incompleteTasks.find(t => t.priority === 'high') || incompleteTasks[0];
+  const remainingTasks = incompleteTasks.length;
+  const completedTasks = tasks.length - remainingTasks;
+  const totalTasks = tasks.length;
 
+  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatMinutes = (minutes: number) => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (h > 0 && m > 0) return `${h}h ${m}m`;
-    if (h > 0) return `${h}h`;
-    return `${m}m`;
-  };
-
+  const sessionProgress = totalSessionTime > 0 ? Math.min(100, Math.max(0, ((totalSessionTime - timeRemaining) / totalSessionTime) * 100)) : 0;
+  
   const handleStartFocus = () => {
     if (focusModeActive) {
       navigate('/timer');
     } else {
-      navigate('/blocker');
+      navigate('/blocker'); // Or wherever start flow is
     }
   };
-
-  const toggleApp = (id: string) => {
-    const updatedApps = blockedApps.map(app => 
-      app.id === id ? { ...app, isEnabled: !app.isEnabled } : app
-    );
-    setBlockedApps(updatedApps);
-    storage.saveBlockedApps(updatedApps);
-  };
-
-  const sessionProgress = totalSessionTime > 0 
-    ? Math.round(((totalSessionTime - timeRemaining) / totalSessionTime) * 100) 
-    : 0;
 
   return (
     <div className="flex flex-col min-h-screen pb-24 relative">
@@ -177,7 +162,7 @@ export default function Dashboard() {
           )}
           <button 
             onClick={() => navigate('/settings')}
-            className="flex items-center justify-center rounded-2xl h-12 w-12 bg-card/80 text-foreground hover:bg-accent transition-all border border-border/50 hover-lift press-effect backdrop-blur-sm"
+            className="flex items-center justify-center rounded-2xl h-12 w-12 bg-card text-foreground hover:bg-accent transition-all border border-border/50 hover-lift press-effect"
           >
             <span className="material-symbols-outlined">settings</span>
           </button>
@@ -185,7 +170,7 @@ export default function Dashboard() {
       </header>
 
       {/* ===== FOCUS STATUS HERO CARD ===== */}
-      <section className="px-6 mb-6 animate-fade-up stagger-1" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+      <section className="px-6 mb-6 animate-fade-up stagger-1">
         <div 
           className={cn(
             "relative overflow-hidden rounded-3xl p-6 border transition-all",
@@ -275,7 +260,7 @@ export default function Dashboard() {
       </section>
 
       {/* ===== BLOCKED APPS QUICK ACCESS ===== */}
-      <section className="px-6 mb-6 animate-fade-up stagger-2" style={{ opacity: 0, animationFillMode: 'forwards' }}>
+      <section className="px-6 mb-6 animate-fade-up stagger-2">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-lg">block</span>
@@ -337,8 +322,8 @@ export default function Dashboard() {
       </section>
 
       {/* ===== FOCUS STATS OVERVIEW ===== */}
-      <section className="flex gap-4 px-6 mb-6 animate-fade-up stagger-3" style={{ opacity: 0, animationFillMode: 'forwards' }}>
-        <div className="flex-1 flex flex-col gap-3 rounded-2xl p-5 border border-border/50 bg-card/60 backdrop-blur-sm zen-card-shadow">
+      <section className="flex gap-4 px-6 mb-6 animate-fade-up stagger-3">
+        <div className="flex-1 flex flex-col gap-3 rounded-2xl p-5 border border-border/50 bg-card zen-card-shadow">
           <div className="flex items-center gap-2">
             <div className="size-8 rounded-xl bg-primary/15 flex items-center justify-center">
               <span className="material-symbols-outlined text-primary text-lg">hourglass_empty</span>
@@ -347,7 +332,7 @@ export default function Dashboard() {
           </div>
           <p className="text-foreground text-3xl font-bold">{focusHours.toFixed(1)}<span className="text-lg text-muted-foreground font-medium ml-1">hrs</span></p>
         </div>
-        <div className="flex-1 flex flex-col gap-3 rounded-2xl p-5 border border-border/50 bg-card/60 backdrop-blur-sm zen-card-shadow">
+        <div className="flex-1 flex flex-col gap-3 rounded-2xl p-5 border border-border/50 bg-card zen-card-shadow">
           <div className="flex items-center gap-2">
             <div className="size-8 rounded-xl bg-highlight/15 flex items-center justify-center">
               <span className="material-symbols-outlined text-highlight text-lg">shield</span>
@@ -360,8 +345,8 @@ export default function Dashboard() {
 
       {/* ===== CURRENT TASK (Secondary) ===== */}
       {priorityTask && (
-        <section className="px-6 mb-6 animate-fade-up stagger-4" style={{ opacity: 0, animationFillMode: 'forwards' }}>
-          <div className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-card/40 backdrop-blur-sm">
+        <section className="px-6 mb-6 animate-fade-up stagger-4">
+          <div className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-card">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-primary">task_alt</span>
@@ -383,8 +368,8 @@ export default function Dashboard() {
       )}
 
       {/* ===== DAILY PROGRESS (Tertiary) ===== */}
-      <section className="px-6 mb-10 animate-fade-up stagger-5" style={{ opacity: 0, animationFillMode: 'forwards' }}>
-        <div className="flex flex-col gap-3 p-4 rounded-2xl border border-border/30 bg-card/30 backdrop-blur-sm">
+      <section className="px-6 mb-10 animate-fade-up stagger-5">
+        <div className="flex flex-col gap-3 p-4 rounded-2xl border border-border/30 bg-card">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-muted-foreground text-base">trending_up</span>
