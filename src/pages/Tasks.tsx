@@ -175,12 +175,22 @@ export default function Tasks() {
                 {completedToday > 0 && <span className="text-primary"> · {completedToday} done today</span>}
               </p>
             </div>
-            <button 
-              onClick={() => navigate('/settings')}
-              className="size-11 rounded-2xl overflow-hidden border border-border/50 bg-card/80 flex items-center justify-center hover:bg-accent transition-colors"
-            >
-              <span className="material-symbols-outlined text-muted-foreground">person</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="size-11 rounded-2xl border border-primary/20 bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-all hover-lift active:scale-95"
+                aria-label="Add Task"
+              >
+                <span className="material-symbols-outlined text-primary">add</span>
+              </button>
+              <button 
+                onClick={() => navigate('/settings')}
+                className="size-11 rounded-2xl overflow-hidden border border-border/50 bg-card/80 flex items-center justify-center hover:bg-accent transition-colors"
+                aria-label="Profile"
+              >
+                <span className="material-symbols-outlined text-muted-foreground">person</span>
+              </button>
+            </div>
           </div>
   
           {/* Tab Switcher */}

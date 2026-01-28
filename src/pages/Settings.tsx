@@ -5,12 +5,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { storage } from "@/lib/storage";
 import { Switch } from "@/components/ui/switch";
+import CustomTimeModal from "@/components/CustomTimeModal";
 
 export default function Settings() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState(storage.getSettings());
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
+  
+  const [isFocusModalOpen, setIsFocusModalOpen] = useState(false);
+  const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
 
   const handleSettingChange = (key: keyof typeof settings, value: boolean | number) => {
     const newSettings = { ...settings, [key]: value };
@@ -138,13 +142,8 @@ export default function Settings() {
                   </button>
                 ))}
                 <button
-                  onClick={() => {
-                    const custom = window.prompt("Enter custom duration in minutes:", settings.defaultFocusDuration.toString());
-                    if (custom && !isNaN(parseInt(custom))) {
-                      handleSettingChange('defaultFocusDuration', parseInt(custom));
-                    }
-                  }}
-                  className={`flex-1 min-w-[80px] py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  onClick={() => setIsFocusModalOpen(true)}
+                  className={`flex-1 min-w-[80px] py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
                     ![15, 25, 45, 60, 90].includes(settings.defaultFocusDuration)
                       ? 'text-white shadow-lg' 
                       : 'bg-muted text-muted-foreground hover:bg-accent'
@@ -192,12 +191,7 @@ export default function Settings() {
                       </button>
                     ))}
                     <button
-                      onClick={() => {
-                        const custom = window.prompt("Enter daily limit in minutes:", settings.dailyTimeLimitMinutes.toString());
-                        if (custom && !isNaN(parseInt(custom))) {
-                          handleSettingChange('dailyTimeLimitMinutes', parseInt(custom));
-                        }
-                      }}
+                      onClick={() => setIsLimitModalOpen(true)}
                       className={`flex-1 min-w-[70px] py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
                         ![30, 60, 120, 180, 300].includes(settings.dailyTimeLimitMinutes)
                           ? 'text-white shadow-md' 
@@ -270,6 +264,22 @@ export default function Settings() {
           <p className="text-muted-foreground/50 text-xs mt-2">Omit • Deep Work OS v1.0</p>
         </div>
       </main>
+
+      <CustomTimeModal 
+        isOpen={isFocusModalOpen}
+        onClose={() => setIsFocusModalOpen(false)}
+        onSave={(mins) => handleSettingChange('defaultFocusDuration', mins)}
+        initialValue={settings.defaultFocusDuration}
+        title="Default Focus Duration"
+      />
+
+      <CustomTimeModal 
+        isOpen={isLimitModalOpen}
+        onClose={() => setIsLimitModalOpen(false)}
+        onSave={(mins) => handleSettingChange('dailyTimeLimitMinutes', mins)}
+        initialValue={settings.dailyTimeLimitMinutes}
+        title="Daily Time Limit"
+      />
     </div>
   );
 }

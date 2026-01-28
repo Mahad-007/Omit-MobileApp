@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { storage, DailyStats } from "@/lib/storage";
+import { storage, DailyStats, Settings } from "@/lib/storage";
 import CalendarModal from "@/components/CalendarModal";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import CustomTimeModal from "@/components/CustomTimeModal";
 
 interface WeeklyData {
   day: string;
@@ -25,6 +29,9 @@ export default function Stats() {
   const [todaySavedHours, setTodaySavedHours] = useState(0);
   const [todayWastedHours, setTodayWastedHours] = useState(0);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [settings, setSettings] = useState<Settings>(storage.getSettings());
+  const [dailyUsage, setDailyUsage] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -70,6 +77,8 @@ export default function Stats() {
       
       setTodaySavedHours(storage.getSavedTime());
       setTodayWastedHours(storage.getWastedTime());
+      setSettings(storage.getSettings());
+      setDailyUsage(storage.getDailyAppUsage());
     };
     
     loadData();
@@ -89,7 +98,29 @@ export default function Stats() {
   const formatTime = (hours: number) => {
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
-    return `${h}h ${m}m`;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+  };
+
+  const remainingMinutes = settings.dailyTimeLimitEnabled 
+    ? storage.getRemainingTime()
+    : Infinity;
+  const isTimeLimitExceeded = settings.dailyTimeLimitEnabled && remainingMinutes <= 0;
+
+  const toggleDailyTimeLimit = (checked: boolean) => {
+    const newSettings = { ...settings, dailyTimeLimitEnabled: checked };
+    setSettings(newSettings);
+    storage.saveSettings(newSettings);
+    toast.success(`Daily limit ${checked ? 'enabled' : 'disabled'}`);
+  };
+
+  const formatMinutes = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
   };
 
   return (
@@ -114,6 +145,60 @@ export default function Stats() {
           <span className="material-symbols-outlined text-muted-foreground">calendar_today</span>
         </button>
       </header>
+      
+      {/* Daily Limit Control Section */}
+      <section className="px-6 mb-6 animate-fade-up">
+        <div className="bg-card rounded-2xl p-5 border border-border/50 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary">timer_off</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Usage Protection</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Daily App Limit</p>
+              </div>
+            </div>
+            <Switch 
+              checked={settings.dailyTimeLimitEnabled}
+              onCheckedChange={toggleDailyTimeLimit}
+              className="data-[state=checked]:bg-primary"
+            />
+          </div>
+
+          {settings.dailyTimeLimitEnabled && (
+            <div 
+              onClick={() => setIsModalOpen(true)}
+              className={cn(
+                "p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all border",
+                isTimeLimitExceeded 
+                  ? "bg-destructive/5 border-destructive/20" 
+                  : "bg-primary/5 border-primary/20"
+              )}
+            >
+              <div className={cn(
+                "size-10 rounded-full flex items-center justify-center shrink-0",
+                isTimeLimitExceeded ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+              )}>
+                <span className="material-symbols-outlined">
+                  {isTimeLimitExceeded ? 'block' : 'timer'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className={cn("text-sm font-bold", isTimeLimitExceeded ? "text-destructive" : "text-foreground")}>
+                    {isTimeLimitExceeded ? 'Limit Reached' : 'Current Limit'}
+                  </p>
+                  <span className="material-symbols-outlined text-xs text-muted-foreground/50">edit</span>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  {isTimeLimitExceeded ? 'Apps Blocked' : `${formatMinutes(remainingMinutes)} left • Used ${formatMinutes(dailyUsage)}`}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Weekly Focus Chart */}
       <section className="px-6 mb-6 animate-fade-up">
@@ -284,6 +369,19 @@ export default function Stats() {
       <CalendarModal 
         isOpen={isCalendarOpen} 
         onClose={() => setIsCalendarOpen(false)} 
+      />
+
+      <CustomTimeModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={(mins) => {
+          const newSettings = { ...settings, dailyTimeLimitMinutes: mins };
+          setSettings(newSettings);
+          storage.saveSettings(newSettings);
+          toast.success("Daily limit updated!");
+        }}
+        initialValue={settings.dailyTimeLimitMinutes}
+        title="Adjust Daily Limit"
       />
     </div>
   );
