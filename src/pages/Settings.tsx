@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { storage } from "@/lib/storage";
 import { Switch } from "@/components/ui/switch";
 import CustomTimeModal from "@/components/CustomTimeModal";
+import { NotificationManager } from "@/utils/notifications";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -229,7 +230,7 @@ export default function Settings() {
                 onCheckedChange={(checked) => handleSettingChange('taskReminders', checked)}
               />
             </div>
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between p-4 border-b border-border/30">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-destructive/15 flex items-center justify-center">
                   <span className="material-symbols-outlined text-destructive">warning</span>
@@ -243,6 +244,20 @@ export default function Settings() {
                 checked={settings.focusAlerts}
                 onCheckedChange={(checked) => handleSettingChange('focusAlerts', checked)}
               />
+            </div>
+            
+            {/* Debug Test Button */}
+            <div className="p-4 bg-primary/5">
+              <button
+                onClick={async () => {
+                   toast.info("Sending test notification in 1 second...");
+                   await NotificationManager.sendInstantNotification("Test Success!", "If you see this, notifications are working.");
+                }}
+                className="w-full py-3 rounded-xl bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30 transition-all flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-sm">precision_manufacturing</span>
+                Test Notification System
+              </button>
             </div>
           </div>
         </section>

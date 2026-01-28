@@ -72,11 +72,19 @@ export default function Tasks() {
     return date.getTime() > today.getTime();
   };
 
+  const isOverdue = (dateStr: string) => {
+    if (!dateStr) return false;
+    const now = new Date();
+    const date = new Date(dateStr);
+    return date.getTime() < now.getTime();
+  };
+
   // Filter Tasks
+  const overdueTasks = tasks.filter(t => !t.completed && t.dueDate && isOverdue(t.dueDate) && !isToday(t.dueDate));
   const todayTasks = tasks.filter(t => isToday(t.dueDate) || !t.dueDate);
   const tomorrowTasks = tasks.filter(t => isTomorrow(t.dueDate));
   const laterTasks = tasks.filter(t => 
-    t.dueDate && !isToday(t.dueDate) && !isTomorrow(t.dueDate) && isUpcoming(t.dueDate)
+    t.dueDate && !isToday(t.dueDate) && !isTomorrow(t.dueDate) && isUpcoming(t.dueDate) && !overdueTasks.includes(t)
   );
 
   const remainingSessions = tasks.filter(t => !t.completed).length;
@@ -117,12 +125,17 @@ export default function Tasks() {
         {task.description && (
           <p className="text-xs text-muted-foreground mt-1 truncate">{task.description}</p>
         )}
-        {task.dueDate && task.dueDate.includes('T') && (
-          <div className="flex items-center gap-1 mt-1 text-[10px] text-primary/70 font-bold uppercase tracking-wider">
-            <span className="material-symbols-outlined text-[12px]">schedule</span>
-            <span>{new Date(task.dueDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 mt-1">
+          {task.dueDate && task.dueDate.includes('T') && (
+            <div className="flex items-center gap-1 text-[10px] text-primary/70 font-bold uppercase tracking-wider">
+              <span className="material-symbols-outlined text-[12px]">schedule</span>
+              <span>{new Date(task.dueDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+            </div>
+          )}
+          {!task.completed && task.dueDate && isOverdue(task.dueDate) && !isToday(task.dueDate) && (
+            <span className="text-[9px] font-black bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-md uppercase tracking-wider">Overdue</span>
+          )}
+        </div>
       </div>
       
       <button
@@ -227,7 +240,10 @@ export default function Tasks() {
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto no-scrollbar px-6 pb-32 pt-6">
           {activeTab === 'today' ? (
-            renderSection('Today', todayTasks, 'No tasks for today. Enjoy your free time!')
+            <>
+              {overdueTasks.length > 0 && renderSection('Overdue', overdueTasks, '')}
+              {renderSection('Today', todayTasks, 'No tasks for today. Enjoy your free time!')}
+            </>
           ) : (
             <>
               {tomorrowTasks.length > 0 && renderSection('Tomorrow', tomorrowTasks, '')}

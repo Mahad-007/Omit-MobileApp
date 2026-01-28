@@ -9,9 +9,18 @@ interface QuickAddTaskModalProps {
 
 export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickAddTaskModalProps) {
   const [title, setTitle] = useState('');
-  const [customDate, setCustomDate] = useState<string>('');
-  const [customTime, setCustomTime] = useState<string>('09:00');
   const [selectedDateOption, setSelectedDateOption] = useState<'today' | 'tomorrow' | 'next_week' | 'custom'>('today');
+  
+  const getTodayLocalDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [customDate, setCustomDate] = useState<string>(getTodayLocalDate());
+  const [customTime, setCustomTime] = useState<string>('09:00');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -30,27 +39,44 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
   if (!isOpen) return null;
 
   const getDateString = (option: 'today' | 'tomorrow' | 'next_week' | 'custom') => {
-    const getLocalISODate = (date: Date) => {
-      const offset = date.getTimezoneOffset();
-      const localDate = new Date(date.getTime() - (offset * 60 * 1000));
-      return localDate.toISOString().split('T')[0];
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const getTimezoneOffset = () => {
+      const date = new Date();
+      const offset = -date.getTimezoneOffset();
+      const sign = offset >= 0 ? '+' : '-';
+      const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+      const minutes = String(Math.abs(offset) % 60).padStart(2, '0');
+      return `${sign}${hours}:${minutes}`;
     };
 
     const now = new Date();
+    const tz = getTimezoneOffset();
+
     if (option === 'today') {
-      return getLocalISODate(now) + 'T09:00:00';
+      return formatDate(now) + 'T09:00:00' + tz;
     } else if (option === 'tomorrow') {
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      return getLocalISODate(tomorrow) + 'T09:00:00';
+      return formatDate(tomorrow) + 'T09:00:00' + tz;
     } else if (option === 'next_week') {
       const nextWeek = new Date(now);
       nextWeek.setDate(nextWeek.getDate() + 7);
-      return getLocalISODate(nextWeek) + 'T09:00:00';
-    } else if (option === 'custom' && customDate) {
-      return `${customDate}T${customTime || '09:00'}:00`;
+      return formatDate(nextWeek) + 'T09:00:00' + tz;
+    } else if (option === 'custom') {
+      // Use customDate if set, otherwise fallback to today
+      const datePart = customDate || formatDate(now);
+      return `${datePart}T${customTime || '09:00'}:00${tz}`;
     }
-    return now.toISOString();
+    
+    // Final fallback should still be a valid local ISO string format
+    const timePart = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':00';
+    return formatDate(now) + 'T' + timePart + tz;
   };
 
   const getDisplayLabel = () => {
@@ -67,7 +93,8 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
 
   const handleDateOptionSelect = (option: 'today' | 'tomorrow' | 'next_week') => {
     setSelectedDateOption(option);
-    setCustomDate('');
+    // Reset custom date to today when switching back to quick options
+    setCustomDate(getTodayLocalDate());
     setShowDatePicker(false);
   };
 
@@ -90,7 +117,8 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
 
     setTitle('');
     setSelectedDateOption('today');
-    setCustomDate('');
+    setCustomDate(getTodayLocalDate());
+    setCustomTime('09:00');
     setPriority('medium');
     onClose();
   };
