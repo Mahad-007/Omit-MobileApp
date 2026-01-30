@@ -1,6 +1,14 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { storage } from "@/lib/storage";
+import { 
+  LayoutGrid, 
+  ListTodo, 
+  BarChart2, 
+  User, 
+  Timer, 
+  Shield 
+} from "lucide-react";
 
 export default function Layout() {
   const location = useLocation();
@@ -35,11 +43,11 @@ export default function Layout() {
   const hideNav = location.pathname === '/timer' || location.pathname === '/blocked';
 
   const navItems = [
-    { path: '/', icon: 'grid_view', label: 'Focus' },
-    { path: '/tasks', icon: 'checklist', label: 'Tasks' },
+    { path: '/', icon: LayoutGrid, label: 'Focus' },
+    { path: '/tasks', icon: ListTodo, label: 'Tasks' },
     // FAB goes here (center) - handles Blocker action
-    { path: '/stats', icon: 'bar_chart', label: 'Stats' },
-    { path: '/settings', icon: 'person', label: 'More' },
+    { path: '/stats', icon: BarChart2, label: 'Stats' },
+    { path: '/settings', icon: User, label: 'More' },
   ];
 
   const isActive = (path: string) => {
@@ -77,14 +85,12 @@ export default function Layout() {
                 }`}
                 style={isActive(item.path) ? { boxShadow: '0 0 20px hsl(var(--primary) / 0.3)' } : {}}
                 >
-                  <span 
-                    className={`material-symbols-outlined text-xl transition-transform duration-200 ${
+                  <item.icon 
+                    className={`w-5 h-5 transition-transform duration-200 ${
                       isActive(item.path) ? 'scale-110' : ''
                     }`}
-                    style={isActive(item.path) ? { fontVariationSettings: "'FILL' 1, 'wght' 400" } : {}}
-                  >
-                    {item.icon}
-                  </span>
+                    strokeWidth={isActive(item.path) ? 2.5 : 2}
+                  />
                 </div>
                 <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
               </button>
@@ -104,12 +110,7 @@ export default function Layout() {
                     : '0 8px 32px hsla(258, 85%, 65%, 0.4), 0 4px 12px hsla(258, 85%, 65%, 0.3)'
                 }}
               >
-                <span 
-                  className="material-symbols-outlined text-2xl"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  {focusModeActive ? 'timer' : 'shield'}
-                </span>
+                {focusModeActive ? <Timer className="w-7 h-7" strokeWidth={2.5} /> : <Shield className="w-7 h-7" strokeWidth={2.5} />}
                 {/* Active session indicator */}
                 {focusModeActive && (
                   <div 
@@ -136,14 +137,12 @@ export default function Layout() {
                 }`}
                 style={isActive(item.path) ? { boxShadow: '0 0 20px hsl(var(--primary) / 0.3)' } : {}}
                 >
-                  <span 
-                    className={`material-symbols-outlined text-xl transition-transform duration-200 ${
+                  <item.icon 
+                    className={`w-5 h-5 transition-transform duration-200 ${
                       isActive(item.path) ? 'scale-110' : ''
                     }`}
-                    style={isActive(item.path) ? { fontVariationSettings: "'FILL' 1, 'wght' 400" } : {}}
-                  >
-                    {item.icon}
-                  </span>
+                    strokeWidth={isActive(item.path) ? 2.5 : 2}
+                  />
                 </div>
                 <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
               </button>

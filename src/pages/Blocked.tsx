@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { storage } from "@/lib/storage";
+import { TimerOff } from "lucide-react";
 
 export default function Blocked() {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ export default function Blocked() {
         {/* Top Status/Icon */}
         <div className="pt-16 flex flex-col items-center">
           <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-6 border border-primary/30">
-            <span className="material-symbols-outlined text-primary text-3xl">timer_off</span>
+            <TimerOff className="w-8 h-8 text-primary" />
           </div>
           {/* HeadlineText */}
           <div className="max-w-xs mx-auto">

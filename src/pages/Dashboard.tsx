@@ -13,16 +13,41 @@ interface InstalledAppWithStatus extends AppInfo {
   blockMode: 'off' | 'session' | 'persistent';
 }
 
+import { 
+  Sun, 
+  Sunset, 
+  Moon, 
+  Settings as SettingsIcon,
+  Shield, 
+  Eye, 
+  Play, 
+  LayoutGrid, 
+  Ban, 
+  Plus, 
+  CheckCircle2, 
+  ArrowRight, 
+  ListPlus, 
+  TrendingUp,
+  Camera, 
+  Music, 
+  AtSign, 
+  Users, 
+  PlayCircle, 
+  Film, 
+  Gamepad2, 
+  MessageSquare
+} from "lucide-react";
+
 // App icons mapping
-const appIcons: Record<string, { icon: string; color: string }> = {
-  'instagram.com': { icon: 'photo_camera', color: 'bg-gradient-to-br from-purple-500 to-pink-500' },
-  'tiktok.com': { icon: 'music_note', color: 'bg-gradient-to-br from-cyan-400 to-pink-500' },
-  'twitter.com': { icon: 'alternate_email', color: 'bg-sky-500' },
-  'facebook.com': { icon: 'people', color: 'bg-blue-600' },
-  'youtube.com': { icon: 'play_circle', color: 'bg-red-500' },
-  'netflix.com': { icon: 'movie', color: 'bg-red-600' },
-  'twitch.tv': { icon: 'videogame_asset', color: 'bg-purple-600' },
-  'reddit.com': { icon: 'forum', color: 'bg-orange-500' },
+const appIcons: Record<string, { icon:  React.ElementType; color: string }> = {
+  'instagram.com': { icon: Camera, color: 'bg-gradient-to-br from-purple-500 to-pink-500' },
+  'tiktok.com': { icon: Music, color: 'bg-gradient-to-br from-cyan-400 to-pink-500' },
+  'twitter.com': { icon: AtSign, color: 'bg-sky-500' },
+  'facebook.com': { icon: Users, color: 'bg-blue-600' },
+  'youtube.com': { icon: PlayCircle, color: 'bg-red-500' },
+  'netflix.com': { icon: Film, color: 'bg-red-600' },
+  'twitch.tv': { icon: Gamepad2, color: 'bg-purple-600' },
+  'reddit.com': { icon: MessageSquare, color: 'bg-orange-500' },
 };
 
 export default function Dashboard() {
@@ -171,7 +196,7 @@ export default function Dashboard() {
   // Logic for greeting and date
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const greetingIcon = hour < 12 ? 'wb_sunny' : hour < 18 ? 'wb_twilight' : 'dark_mode';
+  const GreetingIcon = hour < 12 ? Sun : hour < 18 ? Sunset : Moon;
   
   const dateStr = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -219,7 +244,7 @@ export default function Dashboard() {
       <header className="relative flex items-center bg-transparent pt-14 px-6 pb-6 justify-between animate-fade-up z-10">
         <div className="flex flex-col">
           <p className="text-primary font-bold text-xs uppercase tracking-widest mb-1 flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">{greetingIcon}</span>
+            <GreetingIcon className="w-4 h-4" />
             {dateStr}
           </p>
           <h1 className="text-foreground text-3xl font-bold tracking-tight">
@@ -239,7 +264,7 @@ export default function Dashboard() {
              className="touch-target-44 rounded-2xl bg-card/50 text-foreground hover:bg-card transition-all border border-border/50 hover-lift active:scale-95"
              aria-label="Settings"
            >
-             <span className="material-symbols-outlined">settings</span>
+             <SettingsIcon className="w-6 h-6" />
            </button>
         </div>
       </header>
@@ -279,7 +304,7 @@ export default function Dashboard() {
             ) : (
               <div className="flex flex-col items-center gap-2 py-4">
                  <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <span className="material-symbols-outlined text-3xl text-primary">shield</span>
+                    <Shield className="w-8 h-8 text-primary" />
                  </div>
                  <h2 className="text-2xl font-bold text-foreground">Ready to Focus?</h2>
                  <p className="text-muted-foreground text-sm max-w-[200px] leading-relaxed">
@@ -296,9 +321,7 @@ export default function Dashboard() {
                 focusModeActive ? "bg-highlight shadow-glow" : "bg-primary shadow-lg hover:shadow-primary/25"
               )}
             >
-              <span className="material-symbols-outlined text-2xl">
-                {focusModeActive ? 'visibility' : 'play_arrow'}
-              </span>
+              {focusModeActive ? <Eye className="w-6 h-6" /> : <Play className="w-6 h-6" />}
               <span>{focusModeActive ? 'View Details' : 'Start Session'}</span>
             </button>
           </div>
@@ -310,7 +333,7 @@ export default function Dashboard() {
         <section className="px-6 mb-8 animate-fade-up stagger-2">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-foreground text-sm font-bold flex items-center gap-2">
-               <span className="material-symbols-outlined text-primary text-lg">apps</span>
+               <LayoutGrid className="w-5 h-5 text-primary" />
                Quick Toggle
             </h3>
             <button 
@@ -323,7 +346,7 @@ export default function Dashboard() {
           
           <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-6 px-6">
             {blockedApps.slice(0, 5).map((app) => {
-              const iconData = appIcons[app.url] || { icon: 'block', color: 'bg-muted' };
+              const iconData = appIcons[app.url] || { icon: Ban, color: 'bg-muted' };
               return (
                 <button
                   key={app.id}
@@ -337,9 +360,7 @@ export default function Dashboard() {
                     "size-14 rounded-2xl flex items-center justify-center shadow-sm relative transition-all group-hover:-translate-y-1 group-active:scale-95",
                     iconData.color
                   )}>
-                    <span className="material-symbols-outlined text-white text-2xl">
-                      {iconData.icon}
-                    </span>
+                    <iconData.icon className="w-6 h-6 text-white" />
                     {app.isEnabled && (
                       <div className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-background flex items-center justify-center border border-border">
                            <div className="size-3 rounded-full bg-primary" />
@@ -359,7 +380,7 @@ export default function Dashboard() {
               className="flex flex-col items-center gap-3 min-w-[80px] group"
             >
               <div className="size-14 rounded-2xl bg-card border-2 border-dashed border-border flex items-center justify-center group-hover:border-primary/50 group-active:scale-95 transition-all">
-                <span className="material-symbols-outlined text-muted-foreground text-2xl">add</span>
+                <Plus className="w-6 h-6 text-muted-foreground" />
               </div>
               <span className="text-xs font-medium text-muted-foreground">Add App</span>
             </button>
@@ -391,7 +412,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-card">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-primary">task_alt</span>
+                <CheckCircle2 className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Current Task</p>
@@ -411,14 +432,14 @@ export default function Dashboard() {
                 className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-all shrink-0"
                 aria-label="Add Task"
               >
-                <span className="material-symbols-outlined text-lg">add</span>
+                <Plus className="w-5 h-5" />
               </button>
               <button 
                 onClick={() => navigate('/tasks')}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all shrink-0"
               >
                 <span>{remainingTasks} left</span>
-                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -428,7 +449,7 @@ export default function Dashboard() {
             className="w-full flex items-center justify-center gap-3 p-6 rounded-[2rem] border-2 border-dashed border-border/40 bg-card/30 hover:bg-card/50 hover:border-primary/30 transition-all group"
           >
             <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-primary text-2xl">add_task</span>
+              <ListPlus className="w-7 h-7 text-primary" />
             </div>
             <div className="text-left">
               <p className="text-foreground font-bold text-lg">Add your first task</p>
@@ -443,7 +464,7 @@ export default function Dashboard() {
         <div className="flex flex-col gap-3 p-4 rounded-2xl border border-border/30 bg-card">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-muted-foreground text-base">trending_up</span>
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
               <p className="text-muted-foreground text-xs font-semibold">Task Progress</p>
             </div>
             <span className="text-sm font-bold text-foreground/60">{completedTasks}/{totalTasks}</span>

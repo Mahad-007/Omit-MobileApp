@@ -6,6 +6,15 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import QuickAddTaskModal from "@/components/QuickAddTaskModal";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Check, 
+  Clock, 
+  Trash2, 
+  CheckCircle2, 
+  Plus, 
+  User, 
+  CalendarCheck 
+} from "lucide-react";
 
 export default function Tasks() {
   const navigate = useNavigate();
@@ -107,7 +116,7 @@ export default function Tasks() {
         }`}
       >
         {task.completed && (
-          <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'wght' 500" }}>check</span>
+          <Check className="w-4 h-4 text-white" strokeWidth={3} />
         )}
       </button>
       
@@ -128,7 +137,7 @@ export default function Tasks() {
         <div className="flex items-center gap-2 mt-1">
           {task.dueDate && task.dueDate.includes('T') && (
             <div className="flex items-center gap-1 text-[10px] text-primary/70 font-bold uppercase tracking-wider">
-              <span className="material-symbols-outlined text-[12px]">schedule</span>
+              <Clock className="w-3 h-3" />
               <span>{new Date(task.dueDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
             </div>
           )}
@@ -142,7 +151,7 @@ export default function Tasks() {
         onClick={() => handleDeleteTask(task.id)}
         className="flex-shrink-0 opacity-0 group-hover:opacity-100 p-2 hover:bg-destructive/10 rounded-xl transition-all"
       >
-        <span className="material-symbols-outlined text-muted-foreground hover:text-destructive text-lg">delete</span>
+        <Trash2 className="w-5 h-5 text-muted-foreground hover:text-destructive" />
       </button>
     </div>
   );
@@ -157,7 +166,7 @@ export default function Tasks() {
       {taskList.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="size-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
-            <span className="material-symbols-outlined text-muted-foreground text-2xl">task_alt</span>
+            <CheckCircle2 className="w-7 h-7 text-muted-foreground" />
           </div>
           <p className="text-muted-foreground text-sm">{emptyMessage}</p>
         </div>
@@ -200,14 +209,14 @@ export default function Tasks() {
                 className="size-11 rounded-2xl border border-primary/20 bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-all hover-lift active:scale-95"
                 aria-label="Add Task"
               >
-                <span className="material-symbols-outlined text-primary">add</span>
+                <Plus className="w-6 h-6 text-primary" />
               </button>
               <button 
                 onClick={() => navigate('/settings')}
                 className="size-11 rounded-2xl overflow-hidden border border-border/50 bg-card/80 flex items-center justify-center hover:bg-accent transition-colors"
                 aria-label="Profile"
               >
-                <span className="material-symbols-outlined text-muted-foreground">person</span>
+                <User className="w-6 h-6 text-muted-foreground" />
               </button>
             </div>
           </div>
@@ -251,7 +260,7 @@ export default function Tasks() {
               {tomorrowTasks.length === 0 && laterTasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                    <span className="material-symbols-outlined text-primary text-3xl">event_available</span>
+                    <CalendarCheck className="w-8 h-8 text-primary" />
                   </div>
                   <p className="text-foreground font-medium mb-1">All caught up!</p>
                   <p className="text-muted-foreground text-sm">No upcoming tasks scheduled</p>

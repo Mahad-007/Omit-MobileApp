@@ -6,6 +6,19 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import CustomTimeModal from "@/components/CustomTimeModal";
+import { 
+  ChevronLeft, 
+  Calendar, 
+  TimerOff, 
+  Ban, 
+  Timer, 
+  Edit2, 
+  TrendingUp, 
+  TrendingDown, 
+  Clock, 
+  Hourglass, 
+  Lightbulb 
+} from "lucide-react";
 
 interface WeeklyData {
   day: string;
@@ -135,14 +148,14 @@ export default function Stats() {
           onClick={() => navigate('/')}
           className="size-11 flex items-center justify-center rounded-2xl bg-card/80 border border-border/50 transition-colors hover:bg-accent"
         >
-          <span className="material-symbols-outlined text-muted-foreground">arrow_back_ios_new</span>
+          <ChevronLeft className="w-5 h-5 text-muted-foreground" />
         </button>
         <h1 className="text-lg font-bold tracking-tight">Insights</h1>
         <button 
           onClick={() => setIsCalendarOpen(true)}
           className="size-11 flex items-center justify-center rounded-2xl bg-card/80 border border-border/50 transition-colors hover:bg-accent"
         >
-          <span className="material-symbols-outlined text-muted-foreground">calendar_today</span>
+          <Calendar className="w-5 h-5 text-muted-foreground" />
         </button>
       </header>
       
@@ -152,7 +165,7 @@ export default function Stats() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary">timer_off</span>
+                <TimerOff className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-bold text-foreground">Usage Protection</p>
@@ -180,16 +193,14 @@ export default function Stats() {
                 "size-10 rounded-full flex items-center justify-center shrink-0",
                 isTimeLimitExceeded ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
               )}>
-                <span className="material-symbols-outlined">
-                  {isTimeLimitExceeded ? 'block' : 'timer'}
-                </span>
+                 {isTimeLimitExceeded ? <Ban className="w-5 h-5" /> : <Timer className="w-5 h-5" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <p className={cn("text-sm font-bold", isTimeLimitExceeded ? "text-destructive" : "text-foreground")}>
                     {isTimeLimitExceeded ? 'Limit Reached' : 'Current Limit'}
                   </p>
-                  <span className="material-symbols-outlined text-xs text-muted-foreground/50">edit</span>
+                  <Edit2 className="w-3 h-3 text-muted-foreground/50" />
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
                   {isTimeLimitExceeded ? 'Apps Blocked' : `${formatMinutes(remainingMinutes)} left • Used ${formatMinutes(dailyUsage)}`}
@@ -212,10 +223,10 @@ export default function Stats() {
               focusHoursChange >= 0 
                 ? 'bg-emerald-500/15 text-emerald-500' 
                 : 'bg-red-500/15 text-red-400'
+                ? 'bg-emerald-500/15 text-emerald-500' 
+                : 'bg-red-500/15 text-red-400'
             }`}>
-              <span className="material-symbols-outlined text-sm">
-                {focusHoursChange >= 0 ? 'trending_up' : 'trending_down'}
-              </span>
+              {focusHoursChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {focusHoursChange >= 0 ? '+' : ''}{focusHoursChange}%
             </div>
           </div>
@@ -258,7 +269,7 @@ export default function Stats() {
           <div className="stat-card-positive p-5 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
               <div className="size-8 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                <span className="material-symbols-outlined text-emerald-400 text-lg">schedule</span>
+                <Clock className="w-4 h-4 text-emerald-400" />
               </div>
               <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Time Saved</p>
             </div>
@@ -270,7 +281,7 @@ export default function Stats() {
           <div className="stat-card-negative p-5 rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
               <div className="size-8 rounded-xl bg-red-500/20 flex items-center justify-center">
-                <span className="material-symbols-outlined text-red-400 text-lg">hourglass_empty</span>
+                <Hourglass className="w-4 h-4 text-red-400" />
               </div>
               <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Time Wasted</p>
             </div>
@@ -345,7 +356,7 @@ export default function Stats() {
           <div className="absolute inset-0 bg-primary/5" />
           <div className="relative flex gap-4 items-start">
             <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>lightbulb</span>
+              <Lightbulb className="w-5 h-5 text-primary" style={{ fill: 'currentColor' }} />
             </div>
             <div>
               <p className="text-xs font-bold text-foreground mb-1">Pro Insight</p>

@@ -41,15 +41,34 @@ const defaultApps: { category: string; apps: Omit<BlockedApp, 'id'>[] }[] = [
   }
 ];
 
-const appIcons: Record<string, { icon: string; color: string }> = {
-  'instagram.com': { icon: 'photo_camera', color: 'bg-gradient-to-br from-purple-500 to-pink-500' },
-  'tiktok.com': { icon: 'music_note', color: 'bg-gradient-to-br from-cyan-400 to-pink-500' },
-  'twitter.com': { icon: 'alternate_email', color: 'bg-sky-500' },
-  'facebook.com': { icon: 'people', color: 'bg-blue-600' },
-  'youtube.com': { icon: 'play_circle', color: 'bg-red-500' },
-  'netflix.com': { icon: 'movie', color: 'bg-red-600' },
-  'twitch.tv': { icon: 'videogame_asset', color: 'bg-purple-600' },
-  'reddit.com': { icon: 'forum', color: 'bg-orange-500' },
+import { 
+  Camera, 
+  Music, 
+  AtSign, 
+  Users, 
+  PlayCircle, 
+  Film, 
+  Gamepad2, 
+  MessageSquare,
+  ChevronLeft,
+  ShieldCheck,
+  Smartphone,
+  Plus,
+  Timer,
+  Info,
+  Ban,
+  Play
+} from "lucide-react";
+
+const appIcons: Record<string, { icon:  React.ElementType; color: string }> = {
+  'instagram.com': { icon: Camera, color: 'bg-gradient-to-br from-purple-500 to-pink-500' },
+  'tiktok.com': { icon: Music, color: 'bg-gradient-to-br from-cyan-400 to-pink-500' },
+  'twitter.com': { icon: AtSign, color: 'bg-sky-500' },
+  'facebook.com': { icon: Users, color: 'bg-blue-600' },
+  'youtube.com': { icon: PlayCircle, color: 'bg-red-500' },
+  'netflix.com': { icon: Film, color: 'bg-red-600' },
+  'twitch.tv': { icon: Gamepad2, color: 'bg-purple-600' },
+  'reddit.com': { icon: MessageSquare, color: 'bg-orange-500' },
 };
 
 export default function SocialBlocker() {
@@ -243,9 +262,9 @@ export default function SocialBlocker() {
         <div className="flex items-center p-4 justify-between">
           <button 
             onClick={() => navigate('/')}
-            className="touch-target-44 w-10 h-10 rounded-full bg-card border border-border/50 text-foreground hover:bg-accent transition-colors shrink-0"
+            className="touch-target-44 w-10 h-10 rounded-full bg-card border border-border/50 text-foreground hover:bg-accent transition-colors shrink-0 flex items-center justify-center"
           >
-            <span className="material-symbols-outlined text-[20px]">arrow_back_ios_new</span>
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <h1 className="text-base font-bold tracking-tight text-center flex-1 pr-10">App Blocker</h1>
         </div>
@@ -259,7 +278,7 @@ export default function SocialBlocker() {
           <div className="flex items-center justify-between p-5 rounded-2xl border border-border bg-card shadow-sm">
             <div className="flex items-center gap-4">
               <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-primary text-2xl">verified_user</span>
+                <ShieldCheck className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-foreground text-sm font-bold">Strict Mode</p>
@@ -307,7 +326,7 @@ export default function SocialBlocker() {
                         className="size-8 object-contain"
                       />
                     ) : (
-                      <span className="material-symbols-outlined text-white text-2xl">android</span>
+                      <Smartphone className="w-6 h-6 text-white" />
                     )}
                     {isBlocked && (
                       <div className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-background flex items-center justify-center border border-border">
@@ -333,7 +352,7 @@ export default function SocialBlocker() {
               className="flex flex-col items-center gap-3 min-w-[80px] group"
             >
               <div className="size-14 rounded-2xl bg-card border-2 border-dashed border-border flex items-center justify-center group-hover:border-primary/50 group-active:scale-95 transition-all">
-                <span className="material-symbols-outlined text-muted-foreground text-2xl">add</span>
+                <Plus className="w-6 h-6 text-muted-foreground" />
               </div>
               <span className="text-xs font-medium text-muted-foreground">Add App</span>
             </button>
@@ -345,9 +364,9 @@ export default function SocialBlocker() {
           <div className="flex gap-4 overflow-x-auto no-scrollbar pt-[5px] -mx-4 px-4">
             {(() => {
               const quickApps = [
-                { name: 'YouTube', url: 'youtube.com', icon: 'play_circle', color: 'bg-red-500' },
-                { name: 'Instagram', url: 'instagram.com', icon: 'photo_camera', color: 'bg-gradient-to-br from-purple-500 to-pink-500' },
-                { name: 'Facebook', url: 'facebook.com', icon: 'people', color: 'bg-blue-600' },
+                { name: 'YouTube', url: 'youtube.com', icon: PlayCircle, color: 'bg-red-500' },
+                { name: 'Instagram', url: 'instagram.com', icon: Camera, color: 'bg-gradient-to-br from-purple-500 to-pink-500' },
+                { name: 'Facebook', url: 'facebook.com', icon: Users, color: 'bg-blue-600' },
               ];
 
               return quickApps.map((qApp) => {
@@ -364,7 +383,7 @@ export default function SocialBlocker() {
                     )}
                   >
                     <div className={cn("size-12 rounded-2xl flex items-center justify-center shadow-sm relative", qApp.color)}>
-                      <span className="material-symbols-outlined text-white text-xl">{qApp.icon}</span>
+                      <qApp.icon className="w-5 h-5 text-white" />
                       {isEnabled && (
                         <div className="absolute -top-1 -right-1 size-4 rounded-full bg-background border border-border flex items-center justify-center shadow-sm">
                           <div className="size-2 rounded-full bg-primary" />
@@ -383,7 +402,7 @@ export default function SocialBlocker() {
         <section className="animate-fade-up stagger-1">
           <div className="flex flex-col gap-4 rounded-3xl p-6 border border-border bg-card shadow-sm">
             <div className="flex items-center gap-3 mb-2">
-              <span className="material-symbols-outlined text-highlight text-2xl">timer</span>
+              <Timer className="w-6 h-6 text-highlight" />
               <p className="text-foreground text-lg font-bold">Session Length</p>
             </div>
             
@@ -439,7 +458,7 @@ export default function SocialBlocker() {
               </div>
               <div className="bg-card border border-border/50 rounded-2xl overflow-hidden divide-y divide-border/40 shadow-sm">
                 {categoryApps.map((app) => {
-                  const iconData = appIcons[app.url] || { icon: 'block', color: 'bg-muted' };
+                  const iconData = appIcons[app.url] || { icon: Ban, color: 'bg-muted' };
                   return (
                     <div 
                       key={app.id}
@@ -447,9 +466,7 @@ export default function SocialBlocker() {
                       onClick={() => toggleApp(app.id)} // Make whole row clickable
                     >
                       <div className={`size-10 rounded-xl ${iconData.color} flex items-center justify-center shrink-0 text-white`}>
-                         <span className="material-symbols-outlined text-[20px]">
-                            {iconData.icon}
-                          </span>
+                         <iconData.icon className="w-5 h-5" />
                       </div>
                       
                       <div className="flex-1 min-w-0">
@@ -485,9 +502,9 @@ export default function SocialBlocker() {
               background: 'var(--gradient-primary)',
             }}
           >
-            <span className="material-symbols-outlined text-2xl">
-              {focusModeActive ? 'timer' : isTimeLimitExceeded ? 'block' : 'play_arrow'}
-            </span>
+            <div className="text-2xl">
+              {focusModeActive ? <Timer className="w-6 h-6" /> : isTimeLimitExceeded ? <Ban className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+            </div>
             <span>{focusModeActive ? 'Session Active' : isTimeLimitExceeded ? 'Limit Reached' : 'Start Focus Session'}</span>
           </button>
         </div>

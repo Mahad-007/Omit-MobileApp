@@ -7,6 +7,17 @@ interface QuickAddTaskModalProps {
   onAddTask: (task: Omit<Task, 'id' | 'completed' | 'createdAt'>) => void;
 }
 
+import { 
+  X, 
+  Calendar, 
+  ChevronDown, 
+  Flag, 
+  Folder, 
+  Sun, 
+  CalendarPlus, 
+  CalendarRange 
+} from "lucide-react";
+
 export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickAddTaskModalProps) {
   const [title, setTitle] = useState('');
   const [selectedDateOption, setSelectedDateOption] = useState<'today' | 'tomorrow' | 'next_week' | 'custom'>('today');
@@ -152,7 +163,7 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
             onClick={onClose}
             className="flex items-center justify-center size-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 shadow-xl backdrop-blur-xl transition-all active:scale-90 group"
           >
-            <span className="material-symbols-outlined text-white text-[20px] group-hover:rotate-90 transition-transform duration-300">close</span>
+            <X className="w-5 h-5 text-white group-hover:rotate-90 transition-transform duration-300" />
           </button>
           <div className="flex items-center gap-2 py-1.5 px-3 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-lg">
             <span className="size-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_10px_hsl(var(--primary))]"></span>
@@ -193,9 +204,9 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
                     : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/90'
                 )}
               >
-                <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                <Calendar className="w-4 h-4" />
                 <p className="text-[10px] font-bold uppercase tracking-wider">{getDisplayLabel()}</p>
-                <span className="material-symbols-outlined text-[12px] opacity-60">expand_more</span>
+                <ChevronDown className="w-3 h-3 opacity-60" />
               </button>
             </div>
 
@@ -208,12 +219,12 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
                   : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/90'
               )}
             >
-              <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: priority === 'high' ? "'FILL' 1" : "" }}>flag</span>
+              <Flag className={`w-4 h-4 ${priority === 'high' ? 'fill-current' : ''}`} />
               <p className="text-[10px] font-bold uppercase tracking-wider">Priority</p>
             </button>
             
             <div className="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-white/5 border border-white/10 px-3 text-white/40 shadow-sm">
-              <span className="material-symbols-outlined text-[16px]">folder</span>
+              <Folder className="w-4 h-4" />
               <p className="text-[10px] font-bold uppercase tracking-wider">Inbox</p>
             </div>
           </div>
@@ -277,9 +288,9 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
             </div>
             <div className="p-3 space-y-1">
               {[
-                { id: 'today', label: 'Today', icon: 'today' },
-                { id: 'tomorrow', label: 'Tomorrow', icon: 'event' },
-                { id: 'next_week', label: 'Next Week', icon: 'date_range' },
+                { id: 'today', label: 'Today', icon: Sun },
+                { id: 'tomorrow', label: 'Tomorrow', icon: CalendarPlus },
+                { id: 'next_week', label: 'Next Week', icon: CalendarRange },
               ].map((opt) => (
                 <button
                   key={opt.id}
@@ -289,7 +300,7 @@ export default function QuickAddTaskModal({ isOpen, onClose, onAddTask }: QuickA
                     selectedDateOption === opt.id ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'hover:bg-white/5 text-white/70 hover:text-white'
                   )}
                 >
-                  <span className="material-symbols-outlined text-[20px]">{opt.icon}</span>
+                  <opt.icon className="w-5 h-5" />
                   <span className="text-xs font-black uppercase tracking-wider">{opt.label}</span>
                 </button>
               ))}
