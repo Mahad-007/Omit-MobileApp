@@ -1,5 +1,5 @@
 import { NavLink as RouterNavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Shield, ListTodo, Settings } from "lucide-react";
+import { LayoutDashboard, Shield, ListTodo, Settings, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { storage } from "@/lib/storage";
@@ -97,9 +97,11 @@ export function MobileNav() {
                 : 'var(--shadow-glow-lg)'
             }}
           >
-            <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-              {focusModeActive ? 'timer' : 'shield'}
-            </span>
+            {focusModeActive ? (
+              <Timer className="w-7 h-7" strokeWidth={2} />
+            ) : (
+              <Shield className="w-7 h-7" strokeWidth={2} />
+            )}
           </button>
           {/* Active session indicator dot */}
           {focusModeActive && (

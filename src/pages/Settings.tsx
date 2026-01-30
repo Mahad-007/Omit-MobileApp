@@ -7,6 +7,19 @@ import { storage } from "@/lib/storage";
 import { Switch } from "@/components/ui/switch";
 import CustomTimeModal from "@/components/CustomTimeModal";
 import { NotificationManager } from "@/utils/notifications";
+import { 
+  ChevronLeft, 
+  User, 
+  Check, 
+  Moon, 
+  ShieldCheck, 
+  Timer, 
+  Ban, 
+  Bell, 
+  AlertTriangle, 
+  Bot, 
+  LogOut 
+} from "lucide-react";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -49,7 +62,7 @@ export default function Settings() {
             onClick={() => navigate('/')}
             className="text-primary flex size-11 shrink-0 items-center justify-center rounded-2xl bg-card/80 border border-border/50 transition-colors hover:bg-accent"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>arrow_back_ios_new</span>
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <h1 className="text-lg font-bold tracking-tight">Settings</h1>
           <div className="size-11" />
@@ -62,10 +75,10 @@ export default function Settings() {
           <div className="flex items-center gap-4 p-5 rounded-2xl border border-border/50 bg-card zen-card-shadow">
             <div className="relative">
               <div className="size-16 rounded-2xl flex items-center justify-center overflow-hidden" style={{ background: 'var(--gradient-primary)' }}>
-                <span className="material-symbols-outlined text-white text-3xl">person</span>
+                <User className="w-8 h-8 text-white" />
               </div>
               <div className="absolute -bottom-1 -right-1 size-5 rounded-full bg-emerald-500 border-2 border-card flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-xs">check</span>
+                <Check className="w-3 h-3 text-white" />
               </div>
             </div>
             <div className="flex-1">
@@ -84,7 +97,7 @@ export default function Settings() {
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary">dark_mode</span>
+                  <Moon className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-foreground text-sm font-semibold">Dark Mode</p>
@@ -108,7 +121,7 @@ export default function Settings() {
             <div className="flex items-center justify-between p-4 border-b border-border/30">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary">verified_user</span>
+                  <ShieldCheck className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-foreground text-sm font-semibold">Strict Mode</p>
@@ -123,7 +136,7 @@ export default function Settings() {
             <div className="p-4 border-b border-border/30">
               <div className="flex items-center gap-3 mb-4">
                 <div className="size-10 rounded-xl bg-highlight/15 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-highlight">timer</span>
+                  <Timer className="w-5 h-5 text-highlight" />
                 </div>
                 <p className="text-foreground text-sm font-semibold">Default Focus Duration</p>
               </div>
@@ -161,7 +174,7 @@ export default function Settings() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-primary">block</span>
+                    <Ban className="w-5 h-5 text-primary" />
                   </div>
                   <div>
                     <p className="text-foreground text-sm font-semibold">Daily Time Limit</p>
@@ -218,7 +231,7 @@ export default function Settings() {
             <div className="flex items-center justify-between p-4 border-b border-border/30">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary">notifications</span>
+                  <Bell className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-foreground text-sm font-semibold">Task Reminders</p>
@@ -230,35 +243,10 @@ export default function Settings() {
                 onCheckedChange={(checked) => handleSettingChange('taskReminders', checked)}
               />
             </div>
-            <div className="flex items-center justify-between p-4 border-b border-border/30">
-              <div className="flex items-center gap-3">
-                <div className="size-10 rounded-xl bg-destructive/15 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-destructive">warning</span>
-                </div>
-                <div>
-                  <p className="text-foreground text-sm font-semibold">Focus Alerts</p>
-                  <p className="text-muted-foreground text-xs">Alerts when visiting blocked sites</p>
-                </div>
-              </div>
-              <Switch 
-                checked={settings.focusAlerts}
-                onCheckedChange={(checked) => handleSettingChange('focusAlerts', checked)}
-              />
-            </div>
+
             
             {/* Debug Test Button */}
-            <div className="p-4 bg-primary/5">
-              <button
-                onClick={async () => {
-                   toast.info("Sending test notification in 1 second...");
-                   await NotificationManager.sendInstantNotification("Test Success!", "If you see this, notifications are working.");
-                }}
-                className="w-full py-3 rounded-xl bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30 transition-all flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-sm">precision_manufacturing</span>
-                Test Notification System
-              </button>
-            </div>
+
           </div>
         </section>
 
@@ -268,7 +256,7 @@ export default function Settings() {
             onClick={handleSignOut}
             className="w-full py-4 rounded-2xl bg-destructive/10 text-destructive font-bold hover:bg-destructive/15 transition-colors flex items-center justify-center gap-2 border border-destructive/20"
           >
-            <span className="material-symbols-outlined">logout</span>
+            <LogOut className="w-5 h-5" />
             Sign Out
           </button>
         </section>
