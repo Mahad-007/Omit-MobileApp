@@ -3,6 +3,17 @@ import { useEffect, useState, useCallback } from "react";
 import { storage, Task } from "@/lib/storage";
 import AppBlocker, { isCapacitor } from "@/lib/app-blocker";
 import { NotificationManager } from "@/utils/notifications";
+import { 
+  CheckCircle, 
+  Edit, 
+  ArrowRightLeft, 
+  AlertCircle, 
+  CheckCircle2, 
+  Lock, 
+  Play, 
+  Pause, 
+  Square 
+} from "lucide-react";
 
 export default function FocusTimer() {
   const navigate = useNavigate();
@@ -226,8 +237,8 @@ export default function FocusTimer() {
               <div className={`size-6 rounded-lg flex items-center justify-center transition-colors ${
                 currentTaskId ? 'bg-primary/20 group-hover:bg-primary/30' : 'bg-muted'
               }`}>
-                <span className="material-symbols-outlined text-sm text-primary">
-                  {currentTaskId ? 'check_circle' : 'edit_note'}
+                <span className="text-primary flex items-center justify-center">
+                  {currentTaskId ? <CheckCircle className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
                 </span>
               </div>
               <div className="text-left">
@@ -246,9 +257,7 @@ export default function FocusTimer() {
                 className="p-3 bg-card rounded-xl border border-border/30 transition-all hover:bg-card/80 active:scale-95"
                 title="Switch task"
               >
-                <span className="material-symbols-outlined text-lg text-foreground/60">
-                  swap_horiz
-                </span>
+                <ArrowRightLeft className="w-5 h-5 text-foreground/60" />
               </button>
             )}
           </div>
@@ -270,8 +279,8 @@ export default function FocusTimer() {
                         : 'hover:bg-accent text-foreground/80'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-base">
-                      {task.priority === 'high' ? 'priority_high' : 'task_alt'}
+                    <span className="text-base flex items-center justify-center">
+                      {task.priority === 'high' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                     </span>
                     <span className="text-sm font-medium truncate flex-1">{task.title}</span>
                     {task.priority === 'high' && (
@@ -317,8 +326,8 @@ export default function FocusTimer() {
                 : 'bg-card border border-border/40 text-foreground active:scale-[0.98] hover:bg-card'
             }`}
           >
-            <span className="material-symbols-outlined text-lg">
-              {strictMode ? 'lock' : isPaused ? 'play_arrow' : 'pause'}
+            <span className="text-lg flex items-center justify-center">
+              {strictMode ? <Lock className="w-5 h-5" /> : isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
             </span>
             <span>{strictMode ? 'Locked' : isPaused ? 'Resume' : 'Pause'}</span>
           </button>
@@ -332,7 +341,7 @@ export default function FocusTimer() {
             }`}
             style={!strictMode ? { background: 'var(--gradient-primary)', boxShadow: 'var(--shadow-glow)' } : {}}
           >
-            <span className="material-symbols-outlined text-lg">{strictMode ? 'lock' : 'stop'}</span>
+            <span className="text-lg flex items-center justify-center">{strictMode ? <Lock className="w-5 h-5" /> : <Square className="w-5 h-5" fill="currentColor" />}</span>
             <span>{strictMode ? 'Strict Mode' : 'End Session'}</span>
           </button>
         </div>
