@@ -111,11 +111,11 @@ export const api = {
     })) as BlockedApp[];
   },
 
-  toggleBlockedApp: async (id: string, blocked: boolean) => {
-    // Note: Schema uses 'blocked' column
+  toggleBlockedApp: async (id: string, isEnabled: boolean) => {
+    // Note: Schema uses 'is_enabled' column
     const { data, error } = await supabase
       .from('blocked_apps')
-      .update({ blocked: blocked }) 
+      .update({ is_enabled: isEnabled }) 
       .eq('id', id)
       .select()
       .single();
@@ -132,7 +132,7 @@ export const api = {
     const dbApp = {
       name: app.name,
       url: app.url, 
-      blocked: app.isEnabled, // Map isEnabled to blocked column
+      is_enabled: app.isEnabled !== undefined ? app.isEnabled : app.blocked, // Fallback to blocked if isEnabled missing
       block_mode: app.blockMode,
       icon: app.icon,
       user_id: user.id
