@@ -24,21 +24,55 @@ import { PersistentBlockerManager } from "@/components/PersistentBlockerManager"
 
 
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { storage } from "@/lib/storage";
 import { useTaskNotifications } from "@/hooks/useTaskNotifications";
 import { NotificationManager } from "@/utils/notifications";
+import AppBlocker, { isCapacitor } from "@/lib/app-blocker";
 
 const App = () => {
     useTaskNotifications();
 
+    const [isStorageReady, setStorageReady] = useState(false);
+
     useEffect(() => {
+        // Initialize storage (load from Preferences)
+        const initStorage = async () => {
+             await storage.init();
+             setStorageReady(true);
+        };
+        initStorage();
+
         // Request notification permissions
         NotificationManager.requestPermissions();
 
         // Sync data to extension on app load
         storage.forceSync();
         
+        // Listen for native Android usage updates
+        let nativeListener: any;
+        if (isCapacitor()) {
+             // We cast to any because addListener is not strictly typed in the interface yet
+             (AppBlocker as any).addListener('usageUpdate', (data: { packageName: string, duration: number }) => {
+                console.log('Received native usage:', data);
+                const persistent = storage.getAndroidPersistentApps();
+                const sessionApps = storage.getAndroidSessionApps();
+                const activeSession = storage.getActiveSession();
+                
+                const isBlocked = persistent.includes(data.packageName) || 
+                                  (activeSession && sessionApps.includes(data.packageName));
+                                  
+                if (isBlocked) {
+                     const hours = data.duration / (1000 * 60 * 60);
+                     if (hours > 0) {
+                         storage.addWastedTime(hours);
+                     }
+                }
+             }).then((handle: any) => {
+                 nativeListener = handle;
+             });
+        }
+
         // Listen for time saved updates from the extension
         const handleTimeUpdate = (event: MessageEvent) => {
             if (event.data?.type === 'OMIT_ADD_TIME' && event.data?.payload?.hours) {
@@ -54,12 +88,19 @@ const App = () => {
         };
 
         window.addEventListener('message', handleTimeUpdate);
-        return () => window.removeEventListener('message', handleTimeUpdate);
+        return () => {
+            window.removeEventListener('message', handleTimeUpdate);
+            if (nativeListener) nativeListener.remove();
+        };
     }, []);
+
+    if (!isStorageReady) {
+        return <div className="flex items-center justify-center min-h-screen bg-background"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div></div>;
+    }
 
     return (
 
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <TooltipProvider>
         <AuthProvider>
           <PersistentBlockerManager />

@@ -2,7 +2,9 @@ package com.omit.app;
 
 import android.app.AppOpsManager;
 import android.content.Context;
+import android.content.BroadcastReceiver;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -27,6 +29,7 @@ public class AppBlockerPlugin extends Plugin {
 
     private static List<String> blockedPackages = new ArrayList<>();
     private static boolean isMonitoring = false;
+    private BroadcastReceiver usageReceiver;
 
     public static List<String> getBlockedPackages() {
         return blockedPackages;
@@ -34,6 +37,33 @@ public class AppBlockerPlugin extends Plugin {
 
     public static boolean isMonitoringActive() {
         return isMonitoring;
+    }
+
+    @Override
+    public void load() {
+        super.load();
+        
+        usageReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if ("com.omit.app.USAGE_UPDATE".equals(intent.getAction())) {
+                    String pkg = intent.getStringExtra("packageName");
+                    long duration = intent.getLongExtra("duration", 0);
+                    
+                    JSObject ret = new JSObject();
+                    ret.put("packageName", pkg);
+                    ret.put("duration", duration);
+                    notifyListeners("usageUpdate", ret);
+                }
+            }
+        };
+        
+        IntentFilter filter = new IntentFilter("com.omit.app.USAGE_UPDATE");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+             getContext().registerReceiver(usageReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+             getContext().registerReceiver(usageReceiver, filter);
+        }
     }
 
     @PluginMethod
