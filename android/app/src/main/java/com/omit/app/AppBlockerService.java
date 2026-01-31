@@ -27,6 +27,10 @@ public class AppBlockerService extends AccessibilityService {
     private String pendingBlockedPackage = "";
     private static final long DEBOUNCE_DELAY_MS = 800; // Wait 800ms for app to fully load
 
+    // Usage Tracking
+    private String currentPackage = "";
+    private long lastAppChangeTime = 0;
+
     public static AppBlockerService getInstance() {
         return instance;
     }
@@ -42,6 +46,21 @@ public class AppBlockerService extends AccessibilityService {
             if (packageNameSeq == null) return;
             
             String packageName = packageNameSeq.toString();
+
+             // --- USAGE TRACKING ---
+            long now = System.currentTimeMillis();
+            if (!packageName.equals(currentPackage)) {
+                if (lastAppChangeTime > 0 && !currentPackage.isEmpty()) {
+                    long duration = now - lastAppChangeTime;
+                    if (duration > 1000) { // Only track > 1 second
+                        sendUsageUpdate(currentPackage, duration);
+                    }
+                }
+                currentPackage = packageName;
+                lastAppChangeTime = now;
+            }
+            // ----------------------
+
             List<String> blockedPackages = AppBlockerPlugin.getBlockedPackages();
             
             // Don't block our own app - and reset state when in our app
@@ -74,6 +93,14 @@ public class AppBlockerService extends AccessibilityService {
                 lastBlockedPackage = "";
             }
         }
+    }
+
+    private void sendUsageUpdate(String packageName, long durationMs) {
+        Intent intent = new Intent("com.omit.app.USAGE_UPDATE");
+        intent.setPackage(getPackageName());
+        intent.putExtra("packageName", packageName);
+        intent.putExtra("duration", durationMs);
+        sendBroadcast(intent);
     }
     
     private void cancelPendingOverlay() {
@@ -159,4 +186,3 @@ public class AppBlockerService extends AccessibilityService {
         instance = null;
     }
 }
-

@@ -48,25 +48,26 @@ export function PersistentBlockerManager() {
         
         const hasAppsToBlock = appsToBlock.length > 0;
         
-        // Get current monitoring state from localStorage (simple cache)
-        const wasMonitoring = localStorage.getItem("android_monitoring") === "true";
+        // Get current monitoring state from localStorage (Master Switch)
+        // Default to true if not set? Or false? 
+        // If user never touched it, usually we want it ON if they added apps.
+        // Let's assume if it's null, it's true.
+        const monitoringStored = localStorage.getItem("android_monitoring");
+        const masterSwitch = monitoringStored === null || monitoringStored === "true";
         
         // Update the blocked list on the native side
-        // Note: It's safe to call setBlockedApps even if empty or same
         await AppBlocker.setBlockedApps({ apps: appsToBlock });
         
-        if (hasAppsToBlock) {
-             if (!wasMonitoring) {
-                 await AppBlocker.startMonitoring();
+        if (masterSwitch && hasAppsToBlock) {
+             // Re-enforce monitoring (idempotent on native side)
+             await AppBlocker.startMonitoring();
+             // Ensure local state is consistent
+             if (monitoringStored !== "true") {
                  localStorage.setItem("android_monitoring", "true");
-                 // Only toast if we started a session or strict mode etc, might be annoying if auto-starting on app boot
-                 // toast.success("App Blocking Active");
              }
         } else {
-             if (wasMonitoring) {
-                 await AppBlocker.stopMonitoring();
-                 localStorage.setItem("android_monitoring", "false");
-             }
+             // Stop monitoring if switch is off OR no apps to block
+             await AppBlocker.stopMonitoring();
         }
         
       } catch (e) {
@@ -87,4 +88,3 @@ export function PersistentBlockerManager() {
 
   return null; // Headless
 }
-

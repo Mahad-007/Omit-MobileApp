@@ -1,3 +1,5 @@
+import { Preferences } from '@capacitor/preferences';
+
 // Types
 export interface Task {
   id: string;
@@ -9,6 +11,7 @@ export interface Task {
   priority?: 'low' | 'medium' | 'high';
   completed: boolean;
   createdAt?: string;
+  completedAt?: string;
 }
 
 export interface BlockedApp {
@@ -51,6 +54,10 @@ const STORAGE_KEYS = {
   DAILY_STATS: 'focussphere_daily_stats',
   SETTINGS: 'focussphere_settings',
   DAILY_APP_USAGE: 'focussphere_daily_app_usage',
+  ANDROID_BLOCKED_APPS: 'android_blocked_apps',
+  ANDROID_PERSISTENT_APPS: 'android_persistent_apps',
+  CURRENT_SESSION: 'focussphere_current_session',
+  EXTENSION_SYNC: 'focussphere_sync'
 };
 
 // Event system for real-time updates
@@ -59,12 +66,68 @@ type DataChangeType = 'tasks' | 'blockedApps' | 'focusSessions' | 'stats' | 'set
 
 class LocalStorageService {
   private listeners: Map<DataChangeType, Set<DataChangeListener>> = new Map();
+  private cache: Map<string, string> = new Map();
+  private initialized = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
     // Initialize listener sets for each type
     const types: DataChangeType[] = ['tasks', 'blockedApps', 'focusSessions', 'stats', 'settings', 'all'];
     types.forEach(type => this.listeners.set(type, new Set()));
   }
+
+  async init(): Promise<void> {
+    if (this.initPromise) return this.initPromise;
+
+    this.initPromise = (async () => {
+      const keys = Object.values(STORAGE_KEYS);
+      for (const key of keys) {
+        try {
+          const { value } = await Preferences.get({ key });
+          if (value) {
+            this.cache.set(key, value);
+          } else {
+            // Migration: Check localStorage
+            const local = localStorage.getItem(key);
+            if (local) {
+              this.cache.set(key, local);
+              await Preferences.set({ key, value: local });
+            }
+          }
+        } catch (e) {
+          console.error(`Failed to init key ${key}`, e);
+        }
+      }
+      this.initialized = true;
+      console.log('Storage initialized, migrated if needed.');
+    })();
+    return this.initPromise;
+  }
+
+  // Internal helper to get data (sync)
+  private getItem(key: string): string | null {
+    if (!this.initialized) {
+      // Fallback allowed for initial render but discouraged
+      return localStorage.getItem(key);
+    }
+    return this.cache.get(key) || null;
+  }
+
+  // Internal helper to set data (async persist, sync cache)
+  private setItem(key: string, value: string): void {
+    this.cache.set(key, value);
+    // Persist asynchronously
+    Preferences.set({ key, value }).catch(e => console.error(`Failed to persist ${key}`, e));
+    // Keep localStorage in sync for webview/extension safety (legacy)
+    try { localStorage.setItem(key, value); } catch {}
+  }
+  
+  private removeItem(key: string): void {
+      this.cache.delete(key);
+      Preferences.remove({ key }).catch(e => console.error(`Failed to remove ${key}`, e));
+      try { localStorage.removeItem(key); } catch {}
+  }
+
 
   // Subscribe to data changes
   onChange(type: DataChangeType, listener: DataChangeListener): () => void {
@@ -97,7 +160,7 @@ class LocalStorageService {
         // CHECK FOR ACTIVE SESSION
         let isFocusActive = false;
         try {
-            const sessionData = localStorage.getItem('focussphere_current_session');
+            const sessionData = this.getItem(STORAGE_KEYS.CURRENT_SESSION);
             if (sessionData) {
                 const session = JSON.parse(sessionData);
                 if (session.endTime > Date.now()) {
@@ -108,7 +171,7 @@ class LocalStorageService {
             console.error("Error checking focus session", e);
         }
 
-        const existingStr = localStorage.getItem('focussphere_sync');
+        const existingStr = this.getItem(STORAGE_KEYS.EXTENSION_SYNC);
         let syncData: any = {};
         if (existingStr) {
             syncData = JSON.parse(existingStr);
@@ -120,7 +183,8 @@ class LocalStorageService {
         syncData.focusMode = isFocusActive; // Explicitly set focus mode based on session validity
         syncData.timestamp = Date.now();
         
-        localStorage.setItem('focussphere_sync', JSON.stringify(syncData));
+        const syncStr = JSON.stringify(syncData);
+        this.setItem(STORAGE_KEYS.EXTENSION_SYNC, syncStr);
         
         // Notify extension immediately via window message
         window.postMessage({
@@ -141,7 +205,7 @@ class LocalStorageService {
 
   // --- SETTINGS ---
   getSettings(): Settings {
-    const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    const data = this.getItem(STORAGE_KEYS.SETTINGS);
     return data ? JSON.parse(data) : { 
       taskReminders: true, 
       focusAlerts: true,
@@ -153,7 +217,7 @@ class LocalStorageService {
   }
 
   saveSettings(settings: Settings): Settings {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    this.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     this._updateExtensionSync();
     this.notifyChange('settings');
     return settings;
@@ -169,7 +233,7 @@ class LocalStorageService {
   }
 
   getDailyAppUsage(): number {
-    const data = localStorage.getItem(STORAGE_KEYS.DAILY_APP_USAGE);
+    const data = this.getItem(STORAGE_KEYS.DAILY_APP_USAGE);
     if (!data) return 0;
     
     try {
@@ -197,7 +261,11 @@ class LocalStorageService {
       minutes: currentUsage + minutes
     };
     
-    localStorage.setItem(STORAGE_KEYS.DAILY_APP_USAGE, JSON.stringify(usage));
+    this.setItem(STORAGE_KEYS.DAILY_APP_USAGE, JSON.stringify(usage));
+    
+    // Also update permanent daily stats for history (Wasted Time)
+    this.updateDailyStats(0, minutes / 60);
+
     this.notifyChange('stats');
   }
 
@@ -219,7 +287,7 @@ class LocalStorageService {
 
   // --- TASKS ---
   getTasks(): Task[] {
-    const data = localStorage.getItem(STORAGE_KEYS.TASKS);
+    const data = this.getItem(STORAGE_KEYS.TASKS);
     return data ? JSON.parse(data) : [];
   }
 
@@ -233,7 +301,7 @@ class LocalStorageService {
       tasks.push(task);
     }
     
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    this.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     this._updateExtensionSync();
     this.notifyChange('tasks');
     return task;
@@ -241,14 +309,14 @@ class LocalStorageService {
 
   deleteTask(id: string): void {
     const tasks = this.getTasks().filter((t) => t.id !== id);
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    this.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     this._updateExtensionSync();
     this.notifyChange('tasks');
   }
 
   // --- BLOCKED APPS ---
   getBlockedApps(): BlockedApp[] {
-    const data = localStorage.getItem(STORAGE_KEYS.BLOCKED_APPS);
+    const data = this.getItem(STORAGE_KEYS.BLOCKED_APPS);
     if (!data) return [];
     
     try {
@@ -301,7 +369,7 @@ class LocalStorageService {
       apps.push(savedApp);
     }
 
-    localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
+    this.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
     this._updateExtensionSync();
     this.notifyChange('blockedApps');
     return savedApp;
@@ -309,7 +377,7 @@ class LocalStorageService {
 
   deleteBlockedApp(id: string): void {
     const apps = this.getBlockedApps().filter((a) => a.id !== id);
-    localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
+    this.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
     this._updateExtensionSync();
     this.notifyChange('blockedApps');
   }
@@ -319,7 +387,7 @@ class LocalStorageService {
     const app = apps.find((a) => a.id === id);
     if (app) {
       app.blocked = !app.blocked;
-      localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
+      this.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
       this._updateExtensionSync();
       this.notifyChange('blockedApps');
       return app;
@@ -332,7 +400,7 @@ class LocalStorageService {
     const app = apps.find((a) => a.id === id);
     if (app) {
       app.blockMode = app.blockMode === 'always' ? 'focus' : 'always';
-      localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
+      this.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
       this._updateExtensionSync();
       this.notifyChange('blockedApps');
       return app;
@@ -347,11 +415,6 @@ class LocalStorageService {
       const allApps = this.getBlockedApps();
       return allApps.filter(app => {
           // Always block if mode is 'always'
-          // Note: we check isEnabled as well for safety, but UI should likely enforce isEnabled=true if blockMode=always
-          // For now, let's assume 'always' implies it CAN be blocked, but we still respect the main toggle?
-          // Actually, usually "Always Block" overrides the main toggle, OR the main toggle enables the feature and 'always'/ 'focus' selects the mode.
-          // Looking at SocialBlocker.tsx, `app.isEnabled` seems to be the main "on/off" switch.
-          // So we should probably check isEnabled first.
           if (!app.isEnabled) return false;
 
           if (app.blockMode === 'always') return true;
@@ -373,23 +436,23 @@ class LocalStorageService {
   // --- NATIVE ANDROID APPS ---
   
   getAndroidSessionApps(): string[] {
-      const data = localStorage.getItem('android_blocked_apps'); // Legacy key
+      const data = this.getItem(STORAGE_KEYS.ANDROID_BLOCKED_APPS);
       return data ? JSON.parse(data) : [];
   }
 
   getAndroidPersistentApps(): string[] {
-      const data = localStorage.getItem('android_persistent_apps'); // New key
+      const data = this.getItem(STORAGE_KEYS.ANDROID_PERSISTENT_APPS);
       return data ? JSON.parse(data) : [];
   }
 
   saveAndroidSessionApps(packageNames: string[]): void {
-      localStorage.setItem('android_blocked_apps', JSON.stringify(packageNames));
+      this.setItem(STORAGE_KEYS.ANDROID_BLOCKED_APPS, JSON.stringify(packageNames));
       this._updateExtensionSync();
       this.notifyChange('blockedApps'); // Reuse this event or add 'androidApps'
   }
 
   saveAndroidPersistentApps(packageNames: string[]): void {
-      localStorage.setItem('android_persistent_apps', JSON.stringify(packageNames));
+      this.setItem(STORAGE_KEYS.ANDROID_PERSISTENT_APPS, JSON.stringify(packageNames));
       this._updateExtensionSync();
       this.notifyChange('blockedApps');
   }
@@ -414,7 +477,7 @@ class LocalStorageService {
 
   // --- FOCUS SESSIONS ---
   getFocusSessions(): FocusSession[] {
-    const data = localStorage.getItem(STORAGE_KEYS.FOCUS_SESSIONS);
+    const data = this.getItem(STORAGE_KEYS.FOCUS_SESSIONS);
     return data ? JSON.parse(data) : [];
   }
 
@@ -422,7 +485,7 @@ class LocalStorageService {
     const sessions = this.getFocusSessions();
     const newSession = { ...session, id: crypto.randomUUID() };
     sessions.push(newSession);
-    localStorage.setItem(STORAGE_KEYS.FOCUS_SESSIONS, JSON.stringify(sessions));
+    this.setItem(STORAGE_KEYS.FOCUS_SESSIONS, JSON.stringify(sessions));
     
     // Update daily stats
     this.updateDailyStats(newSession.durationMinutes / 60, 0); // Assuming session time is "saved"
@@ -433,7 +496,7 @@ class LocalStorageService {
   // --- STATS ---
   // Helper to get or initialize stats for today
   getTodayStats(): DailyStats {
-    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const data = this.getItem(STORAGE_KEYS.DAILY_STATS);
     const allStats: DailyStats[] = data ? JSON.parse(data) : [];
     const today = this.getLocalDateString();
     
@@ -441,18 +504,18 @@ class LocalStorageService {
     if (!stats) {
       stats = { date: today, savedHours: 0, wastedHours: 0 };
       allStats.push(stats);
-      localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
+      this.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
     } else if (stats.savedHours === 0 && stats.wastedHours > 0 && stats.wastedHours < 0.5) {
       // Fix old random wasted data (was initialized with Math.random() * 0.5)
       stats.wastedHours = 0;
-      localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
+      this.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
     }
     return stats;
   }
   
   // Get stats for a specific date
   getStatsForDate(dateStr: string): DailyStats {
-    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const data = this.getItem(STORAGE_KEYS.DAILY_STATS);
     const allStats: DailyStats[] = data ? JSON.parse(data) : [];
     
     const stats = allStats.find(s => s.date === dateStr);
@@ -461,7 +524,7 @@ class LocalStorageService {
   
   // Get all stats for a month
   getMonthStats(year: number, month: number): DailyStats[] {
-    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const data = this.getItem(STORAGE_KEYS.DAILY_STATS);
     const allStats: DailyStats[] = data ? JSON.parse(data) : [];
     
     const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -481,7 +544,7 @@ class LocalStorageService {
   }
 
   updateDailyStats(savedAdd: number, wastedAdd: number) {
-    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const data = this.getItem(STORAGE_KEYS.DAILY_STATS);
     const allStats: DailyStats[] = data ? JSON.parse(data) : [];
     const today = this.getLocalDateString();
     
@@ -496,7 +559,7 @@ class LocalStorageService {
         wastedHours: wastedAdd
       });
     }
-    localStorage.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
+    this.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
     this.notifyStatsChange(); // Notify listeners for real-time updates
   }
   
@@ -570,28 +633,30 @@ class LocalStorageService {
 
   // Reset today's stats to zero
   resetTodayStats() {
-      const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+      const data = this.getItem(STORAGE_KEYS.DAILY_STATS);
       const allStats: DailyStats[] = data ? JSON.parse(data) : [];
       const today = this.getLocalDateString();
 
       const index = allStats.findIndex(s => s.date === today);
       if (index >= 0) {
           allStats[index] = { date: today, savedHours: 0, wastedHours: 0 };
+          this.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
       } else {
           allStats.push({ date: today, savedHours: 0, wastedHours: 0 });
+          this.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
       }
   }
 
   // --- BULK TASKS SAVE ---
   saveTasks(tasks: Task[]): void {
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    this.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     this._updateExtensionSync();
     this.notifyChange('tasks');
   }
 
   // --- BULK BLOCKED APPS SAVE ---
   saveBlockedApps(apps: BlockedApp[]): void {
-    localStorage.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
+    this.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
     this._updateExtensionSync();
     this.notifyChange('blockedApps');
   }
@@ -610,7 +675,7 @@ class LocalStorageService {
   
   // Get all stats for this week (Mon-Sun)
   getWeeklyStats(): DailyStats[] {
-    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const data = this.getItem(STORAGE_KEYS.DAILY_STATS);
     const allStats: DailyStats[] = data ? JSON.parse(data) : [];
     
     const weekStart = this.getWeekStart();
@@ -644,7 +709,7 @@ class LocalStorageService {
   
   // Get total focus hours for last week
   getPreviousWeekFocusHours(): number {
-    const data = localStorage.getItem(STORAGE_KEYS.DAILY_STATS);
+    const data = this.getItem(STORAGE_KEYS.DAILY_STATS);
     const allStats: DailyStats[] = data ? JSON.parse(data) : [];
     
     const thisWeekStart = this.getWeekStart();
@@ -695,12 +760,15 @@ class LocalStorageService {
     
     return tasks.filter(t => {
       if (!t.completed) return false;
-      // Check if task has createdAt within this week (as proxy for completion time)
-      if (t.createdAt) {
-        const taskDate = new Date(t.createdAt);
+      
+      // Use completedAt if available, otherwise fallback to createdAt
+      const dateStr = t.completedAt || t.createdAt;
+      
+      if (dateStr) {
+        const taskDate = new Date(dateStr);
         return taskDate >= weekStart;
       }
-      return true; // Count all completed tasks if no date
+      return true; // Count as completed this week if no dates available (fallback)
     }).length;
   }
   
@@ -749,12 +817,12 @@ class LocalStorageService {
       endTime,
       duration: durationMinutes
     };
-    localStorage.setItem('focussphere_current_session', JSON.stringify(session));
+    this.setItem(STORAGE_KEYS.CURRENT_SESSION, JSON.stringify(session));
     this._updateExtensionSync();
   }
 
   endFocusSession(): void {
-    const sessionData = localStorage.getItem('focussphere_current_session');
+    const sessionData = this.getItem(STORAGE_KEYS.CURRENT_SESSION);
     if (sessionData) {
       try {
         const session = JSON.parse(sessionData);
@@ -775,13 +843,13 @@ class LocalStorageService {
         console.error('Error ending focus session', e);
       }
     }
-    localStorage.removeItem('focussphere_current_session');
+    this.removeItem(STORAGE_KEYS.CURRENT_SESSION);
     this._updateExtensionSync();
     this.notifyChange('focusSessions');
   }
 
   getActiveSession(): { startTime: number; endTime: number; duration: number } | null {
-    const sessionData = localStorage.getItem('focussphere_current_session');
+    const sessionData = this.getItem(STORAGE_KEYS.CURRENT_SESSION);
     if (!sessionData) return null;
     
     try {
@@ -790,7 +858,7 @@ class LocalStorageService {
         return session;
       }
       // Session expired, clean up
-      localStorage.removeItem('focussphere_current_session');
+      this.removeItem(STORAGE_KEYS.CURRENT_SESSION);
       return null;
     } catch (e) {
       return null;

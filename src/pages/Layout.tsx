@@ -83,7 +83,6 @@ export default function Layout() {
                     ? 'bg-primary/15' 
                     : ''
                 }`}
-                style={isActive(item.path) ? { boxShadow: '0 0 20px hsl(var(--primary) / 0.3)' } : {}}
                 >
                   <item.icon 
                     className={`w-5 h-5 transition-transform duration-200 ${
@@ -135,7 +134,6 @@ export default function Layout() {
                     ? 'bg-primary/15' 
                     : ''
                 }`}
-                style={isActive(item.path) ? { boxShadow: '0 0 20px hsl(var(--primary) / 0.3)' } : {}}
                 >
                   <item.icon 
                     className={`w-5 h-5 transition-transform duration-200 ${
