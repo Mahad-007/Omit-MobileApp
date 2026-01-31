@@ -1,4 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
+import { api } from './api';
 
 // Types
 export interface Task {
@@ -69,11 +70,67 @@ class LocalStorageService {
   private cache: Map<string, string> = new Map();
   private initialized = false;
   private initPromise: Promise<void> | null = null;
+  private userId: string | null = null;
 
   constructor() {
     // Initialize listener sets for each type
     const types: DataChangeType[] = ['tasks', 'blockedApps', 'focusSessions', 'stats', 'settings', 'all'];
     types.forEach(type => this.listeners.set(type, new Set()));
+  }
+
+  // --- AUTH & SYNC ---
+  setAuth(userId: string | null) {
+      if (this.userId !== userId) {
+          this.userId = userId;
+          if (userId) {
+              console.log("Storage: User authenticated, starting sync...");
+              this.syncDown();
+          }
+      }
+  }
+
+  // Pull data from Server and merge/overwrite
+  async syncDown() {
+      if (!this.userId) return;
+      try {
+          // TASKS
+          const serverTasks = await api.getTasks();
+          if (serverTasks.length > 0) {
+              // Strategy: Server wins for now (Simple Sync)
+              const localTasks = this.getTasks();
+              const mergedTasks = [...localTasks];
+              
+              serverTasks.forEach(st => {
+                  const idx = mergedTasks.findIndex(lt => lt.id === st.id);
+                  if (idx >= 0) {
+                       mergedTasks[idx] = st; // Server overwrite
+                  } else {
+                       mergedTasks.push(st);
+                  }
+              });
+              this.saveTasks(mergedTasks, false); // false = don't push back to server loop
+          }
+
+          // BLOCKED APPS
+          const serverApps = await api.getBlockedApps();
+          if (serverApps.length > 0) {
+              const localApps = this.getBlockedApps();
+              const mergedApps = [...localApps];
+              serverApps.forEach(sa => {
+                  const idx = mergedApps.findIndex(la => la.id === sa.id);
+                  if (idx >= 0) {
+                      mergedApps[idx] = sa;
+                  } else {
+                      mergedApps.push(sa);
+                  }
+              });
+              this.saveBlockedApps(mergedApps, false);
+          }
+          
+          console.log("Storage: Sync down complete");
+      } catch (e) {
+          console.error("Storage: Sync down failed", e);
+      }
   }
 
   async init(): Promise<void> {
@@ -291,14 +348,16 @@ class LocalStorageService {
     return data ? JSON.parse(data) : [];
   }
 
-  saveTask(task: Task): Task {
+  saveTask(task: Task, sync = true): Task {
     const tasks = this.getTasks();
     const existingIndex = tasks.findIndex((t) => t.id === task.id);
     
     if (existingIndex >= 0) {
       tasks[existingIndex] = task;
+      if (sync && this.userId) api.updateTask(task.id, task).catch(console.error);
     } else {
       tasks.push(task);
+      if (sync && this.userId) api.createTask(task).catch(console.error);
     }
     
     this.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
@@ -307,11 +366,13 @@ class LocalStorageService {
     return task;
   }
 
-  deleteTask(id: string): void {
+  deleteTask(id: string, sync = true): void {
     const tasks = this.getTasks().filter((t) => t.id !== id);
     this.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     this._updateExtensionSync();
     this.notifyChange('tasks');
+    
+    if (sync && this.userId) api.deleteTask(id).catch(console.error);
   }
 
   // --- BLOCKED APPS ---
@@ -351,7 +412,7 @@ class LocalStorageService {
     }
   }
 
-  saveBlockedApp(app: Omit<BlockedApp, 'id'> | BlockedApp): BlockedApp {
+  saveBlockedApp(app: Omit<BlockedApp, 'id'> | BlockedApp, sync = true): BlockedApp {
     const apps = this.getBlockedApps();
     let savedApp: BlockedApp;
 
@@ -372,6 +433,11 @@ class LocalStorageService {
     this.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
     this._updateExtensionSync();
     this.notifyChange('blockedApps');
+
+    if (sync && this.userId) {
+        api.createBlockedApp(savedApp).catch(console.error);
+    }
+
     return savedApp;
   }
 
@@ -387,9 +453,14 @@ class LocalStorageService {
     const app = apps.find((a) => a.id === id);
     if (app) {
       app.blocked = !app.blocked;
+      app.isEnabled = app.blocked;
       this.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
       this._updateExtensionSync();
       this.notifyChange('blockedApps');
+      
+      if (this.userId && app.isEnabled !== undefined) {
+         api.toggleBlockedApp(id, app.isEnabled).catch(console.error);
+      }
       return app;
     }
     return null;
@@ -481,7 +552,7 @@ class LocalStorageService {
     return data ? JSON.parse(data) : [];
   }
 
-  addFocusSession(session: Omit<FocusSession, 'id'>): FocusSession {
+  addFocusSession(session: Omit<FocusSession, 'id'>, sync = true): FocusSession {
     const sessions = this.getFocusSessions();
     const newSession = { ...session, id: crypto.randomUUID() };
     sessions.push(newSession);
@@ -489,6 +560,10 @@ class LocalStorageService {
     
     // Update daily stats
     this.updateDailyStats(newSession.durationMinutes / 60, 0); // Assuming session time is "saved"
+    
+    if (sync && this.userId) {
+        api.addFocusSession(newSession).catch(console.error);
+    }
     
     return newSession;
   }
@@ -648,14 +723,14 @@ class LocalStorageService {
   }
 
   // --- BULK TASKS SAVE ---
-  saveTasks(tasks: Task[]): void {
+  saveTasks(tasks: Task[], sync = true): void {
     this.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     this._updateExtensionSync();
     this.notifyChange('tasks');
   }
 
   // --- BULK BLOCKED APPS SAVE ---
-  saveBlockedApps(apps: BlockedApp[]): void {
+  saveBlockedApps(apps: BlockedApp[], sync = true): void {
     this.setItem(STORAGE_KEYS.BLOCKED_APPS, JSON.stringify(apps));
     this._updateExtensionSync();
     this.notifyChange('blockedApps');
