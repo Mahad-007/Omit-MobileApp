@@ -33,7 +33,7 @@ export class NotificationManager {
           await this.createChannels();
           toast.success("Notification permissions granted!");
         } else {
-          toast.error("Notification permissions denied.");
+          console.log("Notification permissions denied.");
         }
         return granted;
       }

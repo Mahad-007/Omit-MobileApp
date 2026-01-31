@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { storage, DailyStats, Settings } from "@/lib/storage";
+import { useTasks } from "@/lib/api";
 import CalendarModal from "@/components/CalendarModal";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -17,7 +18,9 @@ import {
   TrendingDown, 
   Clock, 
   Hourglass, 
-  Lightbulb 
+  Lightbulb,
+  Zap,
+  Target
 } from "lucide-react";
 
 interface WeeklyData {
@@ -28,6 +31,8 @@ interface WeeklyData {
 
 export default function Stats() {
   const navigate = useNavigate();
+  const { data: tasks = [] } = useTasks();
+
   const [weeklyFocusHours, setWeeklyFocusHours] = useState(0);
   const [focusHoursChange, setFocusHoursChange] = useState(0);
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
@@ -65,19 +70,12 @@ export default function Stats() {
       const hourChange = storage.calculatePercentageChange(totalWeeklyHours, previousWeekHours);
       setFocusHoursChange(hourChange);
       
-      const score = Math.min(100, Math.round((totalWeeklyHours / 40) * 100));
+      const score = Math.min(100, Math.round((totalWeeklyHours / 40) * 100)); // Simple scoring based on 40h workweek goal
       setFocusScore(score);
       
       const previousScore = Math.min(100, Math.round((previousWeekHours / 40) * 100));
       const scoreChange = storage.calculatePercentageChange(score, previousScore);
       setFocusScoreChange(scoreChange);
-      
-      const weeklyTasks = storage.getWeeklyTasksCompleted();
-      setTasksCompleted(weeklyTasks);
-      
-      const previousTasks = storage.getPreviousWeekTasksCompleted();
-      const taskChange = storage.calculatePercentageChange(weeklyTasks, previousTasks);
-      setTasksChange(taskChange);
       
       const best = storage.getBestProductiveDay();
       setBestDay(best);
@@ -97,20 +95,64 @@ export default function Stats() {
     loadData();
     
     const unsubscribeStats = storage.onChange('stats', loadData);
-    const unsubscribeTasks = storage.onChange('tasks', loadData);
+    
     return () => {
       unsubscribeStats();
-      unsubscribeTasks();
     };
   }, []);
+
+  // Calculate task stats from API data whenever it changes
+  useEffect(() => {
+    // Helper to get start of current week (Monday)
+    const getWeekStart = (d: Date = new Date()) => {
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const start = new Date(d);
+      start.setDate(diff);
+      start.setHours(0, 0, 0, 0);
+      return start;
+    };
+
+    const weekStart = getWeekStart();
+    const lastWeekStart = new Date(weekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+    const currentWeekTasks = tasks.filter(t => {
+      if (!t.completed) return false;
+      const dateStr = t.completedAt || t.createdAt;
+      if (!dateStr) return true;
+      const date = new Date(dateStr);
+      return date >= weekStart;
+    }).length;
+
+    const lastWeekTasks = tasks.filter(t => {
+      if (!t.completed) return false;
+      const dateStr = t.completedAt || t.createdAt;
+      if (!dateStr) return false;
+      const date = new Date(dateStr);
+      return date >= lastWeekStart && date < weekStart;
+    }).length;
+
+    setTasksCompleted(currentWeekTasks);
+    setTasksChange(storage.calculatePercentageChange(currentWeekTasks, lastWeekTasks));
+
+  }, [tasks]);
 
   const maxHours = Math.max(...weeklyData.map(d => d.hours), 1);
   const deepWorkGoal = 20;
   const deepWorkProgress = Math.min(100, (deepWorkHours / deepWorkGoal) * 100);
 
-  const formatTime = (hours: number) => {
+  const formatHoursToTime = (hours: number) => {
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+  };
+  
+  const formatMinutesToTime = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
     if (h > 0 && m > 0) return `${h}h ${m}m`;
     if (h > 0) return `${h}h`;
     return `${m}m`;
@@ -128,254 +170,203 @@ export default function Stats() {
     toast.success(`Daily limit ${checked ? 'enabled' : 'disabled'}`);
   };
 
-  const formatMinutes = (minutes: number) => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (h > 0 && m > 0) return `${h}h ${m}m`;
-    if (h > 0) return `${h}h`;
-    return `${m}m`;
-  };
-
   return (
-    <div className="min-h-screen flex flex-col relative pb-24">
-      {/* Atmospheric backgrounds */}
-      <div className="absolute top-0 right-0 w-80 h-80 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-40 left-0 w-64 h-64 bg-highlight/5 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 pt-14 pb-6 relative z-10">
+    <div className="flex flex-col min-h-screen bg-background relative overflow-hidden pb-safe-area-bottom">
+      {/* Background Gradient Mesh */}
+      <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
+      <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-primary/10 blur-[100px] rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2" />
+      
+      {/* Header - Compact */}
+      <header className="flex items-center justify-between px-6 safe-area-top pt-6 pb-2 relative z-10 animate-fade-up">
         <button 
           onClick={() => navigate('/')}
-          className="size-11 flex items-center justify-center rounded-2xl bg-card/80 border border-border/50 transition-colors hover:bg-accent"
+          className="size-10 flex items-center justify-center rounded-xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/10 transition-colors hover:bg-white/80 active:scale-95"
         >
-          <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+          <ChevronLeft className="w-5 h-5 text-foreground" />
         </button>
-        <h1 className="text-lg font-bold tracking-tight">Insights</h1>
+        <span className="text-sm font-bold tracking-tight bg-secondary/50 px-3 py-1 rounded-full backdrop-blur-sm">Insights</span>
         <button 
           onClick={() => setIsCalendarOpen(true)}
-          className="size-11 flex items-center justify-center rounded-2xl bg-card/80 border border-border/50 transition-colors hover:bg-accent"
+          className="size-10 flex items-center justify-center rounded-xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/10 transition-colors hover:bg-white/80 active:scale-95"
         >
-          <Calendar className="w-5 h-5 text-muted-foreground" />
+          <Calendar className="w-5 h-5 text-foreground" />
         </button>
       </header>
       
-      {/* Daily Limit Control Section */}
-      <section className="px-6 mb-6 animate-fade-up">
-        <div className="bg-card rounded-2xl p-5 border border-border/50 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <TimerOff className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">Usage Protection</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Daily App Limit</p>
-              </div>
-            </div>
-            <Switch 
-              checked={settings.dailyTimeLimitEnabled}
-              onCheckedChange={toggleDailyTimeLimit}
-              className="data-[state=checked]:bg-primary"
-            />
-          </div>
-
-          {settings.dailyTimeLimitEnabled && (
-            <div 
-              onClick={() => setIsModalOpen(true)}
-              className={cn(
-                "p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all border",
-                isTimeLimitExceeded 
-                  ? "bg-destructive/5 border-destructive/20" 
-                  : "bg-primary/5 border-primary/20"
-              )}
-            >
-              <div className={cn(
-                "size-10 rounded-full flex items-center justify-center shrink-0",
-                isTimeLimitExceeded ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
-              )}>
-                 {isTimeLimitExceeded ? <Ban className="w-5 h-5" /> : <Timer className="w-5 h-5" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className={cn("text-sm font-bold", isTimeLimitExceeded ? "text-destructive" : "text-foreground")}>
-                    {isTimeLimitExceeded ? 'Limit Reached' : 'Current Limit'}
-                  </p>
-                  <Edit2 className="w-3 h-3 text-muted-foreground/50" />
+      <div className="flex-1 overflow-y-auto px-4 pb-24 no-scrollbar space-y-3">
+        
+        {/* Daily Limit Control - Compact */}
+        <section className="animate-fade-up stagger-1">
+          <div className="bg-white/60 dark:bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/20 dark:border-white/10 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="size-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <TimerOff className="w-4 h-4" />
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  {isTimeLimitExceeded ? 'Apps Blocked' : `${formatMinutes(remainingMinutes)} left • Used ${formatMinutes(dailyUsage)}`}
-                </p>
+                <div className="flex flex-col">
+                  <p className="text-xs font-bold text-foreground">Usage Limit</p>
+                  <p className="text-[10px] text-muted-foreground">{settings.dailyTimeLimitEnabled ? (isTimeLimitExceeded ? "Limit Reached" : `${formatMinutesToTime(remainingMinutes)} left`) : "Disabled"}</p>
+                </div>
               </div>
+              <Switch 
+                checked={settings.dailyTimeLimitEnabled}
+                onCheckedChange={toggleDailyTimeLimit}
+                className="scale-75 origin-right data-[state=checked]:bg-primary"
+              />
             </div>
-          )}
-        </div>
-      </section>
 
-      {/* Weekly Focus Chart */}
-      <section className="px-6 mb-6 animate-fade-up">
-        <div className="bg-card rounded-2xl p-6 border border-border/50 zen-card-shadow">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-1">Focus Hours</p>
-              <h2 className="text-4xl font-bold tracking-tight">{weeklyFocusHours.toFixed(1)}<span className="text-lg text-muted-foreground font-medium ml-1">hrs</span></h2>
-            </div>
-            <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 ${
-              focusHoursChange >= 0 
-                ? 'bg-emerald-500/15 text-emerald-500' 
-                : 'bg-red-500/15 text-red-400'
-                ? 'bg-emerald-500/15 text-emerald-500' 
-                : 'bg-red-500/15 text-red-400'
-            }`}>
-              {focusHoursChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {focusHoursChange >= 0 ? '+' : ''}{focusHoursChange}%
-            </div>
-          </div>
-          
-          {/* Bar Chart */}
-          <div className="relative h-40 mt-8">
-            <div className="flex items-end justify-between h-32 gap-2">
-              {weeklyData.map((data, index) => {
-                const barHeight = maxHours > 0 ? Math.max((data.hours / maxHours) * 100, 4) : 4;
-                const isToday = index === new Date().getDay() - 1 || (new Date().getDay() === 0 && index === 6);
-                return (
-                  <div key={data.day} className="flex-1 flex flex-col items-center justify-end h-full gap-2">
-                    <div 
-                      className={`w-full rounded-lg transition-all duration-700 ease-out animate-grow-up ${
-                        isToday ? 'bg-gradient-to-t from-primary to-purple-500' : 'bg-primary/30'
-                      }`}
-                      style={{ 
-                        height: `${barHeight}%`,
-                        animationDelay: `${index * 0.08}s`
-                      }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-between mt-3">
-              {weeklyData.map((data) => (
-                <span key={data.day} className="text-[10px] font-bold text-muted-foreground/60 flex-1 text-center">
-                  {data.day}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Time Saved vs Wasted */}
-      <section className="px-6 mb-6 animate-fade-up stagger-1">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="stat-card-positive p-5 rounded-2xl">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="size-8 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-emerald-400" />
-              </div>
-              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Time Saved</p>
-            </div>
-            <p className="text-2xl font-bold text-emerald-400">{formatTime(weeklyFocusHours)}</p>
-            <p className="text-[11px] text-muted-foreground/70 mt-1">
-              Today: {formatTime(todaySavedHours)}
-            </p>
-          </div>
-          <div className="stat-card-negative p-5 rounded-2xl">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="size-8 rounded-xl bg-red-500/20 flex items-center justify-center">
-                <Hourglass className="w-4 h-4 text-red-400" />
-              </div>
-              <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Time Wasted</p>
-            </div>
-            <p className="text-2xl font-bold text-red-400">{formatTime(weeklyWastedHours)}</p>
-            <p className="text-[11px] text-muted-foreground/70 mt-1">
-              Today: {formatTime(todayWastedHours)}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Grid */}
-      <section className="px-6 grid grid-cols-2 gap-3 mb-6 animate-fade-up stagger-2">
-        <div className="bg-card p-5 rounded-2xl border border-border/50">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Focus Score</p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-3xl font-bold gradient-text">{focusScore}</span>
-            <span className={`text-[10px] font-bold ${focusScoreChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {focusScoreChange >= 0 ? '+' : ''}{focusScoreChange}%
-            </span>
-          </div>
-          <p className="text-[11px] text-muted-foreground/70 mt-2">
-            {focusScoreChange >= 0 ? 'Better than last week' : 'Lower than last week'}
-          </p>
-        </div>
-        <div className="bg-card p-5 rounded-2xl border border-border/50">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Tasks Done</p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-3xl font-bold">{tasksCompleted}</span>
-            <span className={`text-[10px] font-bold ${tasksChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {tasksChange >= 0 ? '+' : ''}{tasksChange}%
-            </span>
-          </div>
-          <p className="text-[11px] text-muted-foreground/70 mt-2">
-            {tasksChange >= 0 ? 'Consistent progress' : 'Less than last week'}
-          </p>
-        </div>
-      </section>
-
-      {/* Deep Work Breakdown */}
-      <section className="px-6 mb-6 animate-fade-up stagger-3">
-        <div className="bg-card rounded-2xl p-5 border border-border/50">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold">Weekly Breakdown</h3>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium">Deep Work</span>
-                <span className="text-sm font-bold text-primary">{formatTime(deepWorkHours)}</span>
-              </div>
-              <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
-                <div 
-                  className="h-full rounded-full transition-all duration-700 ease-out"
-                  style={{ width: `${deepWorkProgress}%`, background: 'var(--gradient-primary)' }}
-                />
-              </div>
-              <div className="flex justify-between mt-2">
-                <p className="text-[10px] text-muted-foreground">
-                  {bestDay ? `Best: ${bestDay.day} (${bestDay.hours.toFixed(1)}h)` : 'Track more sessions'}
-                </p>
-                <p className="text-[10px] text-muted-foreground">Goal: {deepWorkGoal}h</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pro Insight */}
-      <section className="px-6 mb-6 animate-fade-up stagger-4">
-        <div className="relative rounded-2xl p-5 overflow-hidden gradient-border">
-          <div className="absolute inset-0 bg-primary/5" />
-          <div className="relative flex gap-4 items-start">
-            <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-              <Lightbulb className="w-5 h-5 text-primary" style={{ fill: 'currentColor' }} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-foreground mb-1">Pro Insight</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {bestDay ? (
-                  <>
-                    You're most productive on <span className="text-primary font-semibold">{bestDay.day} mornings</span>. 
-                    Schedule deep work between 8-11 AM for maximum focus.
-                  </>
-                ) : (
-                  <>
-                    Start tracking focus sessions to unlock personalized productivity insights.
-                  </>
+            {settings.dailyTimeLimitEnabled && (
+              <div 
+                onClick={() => setIsModalOpen(true)}
+                className={cn(
+                  "h-8 px-3 rounded-lg flex items-center justify-between cursor-pointer hover:bg-black/5 transition-all border w-full",
+                  isTimeLimitExceeded 
+                    ? "bg-red-50/50 border-red-200 dark:bg-red-900/10 dark:border-red-800/30" 
+                    : "bg-indigo-50/30 border-indigo-100 dark:bg-indigo-900/10 dark:border-indigo-800/30"
                 )}
-              </p>
-            </div>
+              >
+                  <span className="text-[10px] font-medium text-muted-foreground">Used: {formatMinutesToTime(dailyUsage)}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-foreground">{formatMinutesToTime(settings.dailyTimeLimitMinutes)} limit</span>
+                    <Edit2 className="w-3 h-3 text-muted-foreground ml-1" />
+                  </div>
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* Weekly Focus & Charts - Combined BENTO */}
+        <section className="grid grid-cols-2 gap-3 animate-fade-up stagger-2">
+            
+            {/* Main Focus Stat */}
+            <div className="col-span-2 bg-white dark:bg-zinc-900 rounded-3xl p-5 border border-border shadow-sm flex flex-col justify-between min-h-[160px]">
+               <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-3xl font-bold tracking-tight text-foreground">{weeklyFocusHours.toFixed(1)}<span className="text-sm text-muted-foreground font-medium ml-1">h</span></h2>
+                    <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1">Focus Time</p>
+                  </div>
+                   <div className={cn(
+                    "px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1",
+                    focusHoursChange >= 0 
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
+                      : "bg-red-500/10 text-red-600 dark:text-red-400"
+                  )}>
+                    {focusHoursChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    {Math.abs(focusHoursChange)}%
+                  </div>
+               </div>
+
+               {/* Mini Bar Chart */}
+               <div className="flex items-end justify-between h-16 gap-2 mt-4">
+                  {weeklyData.map((data, index) => {
+                    const barHeight = maxHours > 0 ? Math.max((data.hours / maxHours) * 100, 10) : 10;
+                    const isToday = index === new Date().getDay() - 1 || (new Date().getDay() === 0 && index === 6);
+                    return (
+                      <div key={data.day} className="flex-1 flex flex-col items-center justify-end h-full">
+                        <div 
+                          className={cn(
+                            "w-full rounded-md transition-all duration-700 ease-out",
+                            isToday 
+                              ? "bg-primary shadow-[0_0_8px_rgba(99,102,241,0.4)]" 
+                              : "bg-muted"
+                          )}
+                          style={{ height: `${barHeight}%` }}
+                        />
+                      </div>
+                    );
+                  })}
+               </div>
+               <div className="flex justify-between mt-2">
+                 {weeklyData.map(d => (
+                   <span key={d.day} className="text-[8px] font-bold text-muted-foreground/50 w-full text-center">{d.day.charAt(0)}</span>
+                 ))}
+               </div>
+            </div>
+
+            {/* Focus Score - Informational */}
+            <div 
+              onClick={() => toast.info("Score based on 40h weekly goal. Keep focusing!")}
+              className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-4 rounded-3xl border border-border shadow-sm flex flex-col justify-center cursor-pointer hover:bg-white/80 active:scale-95 transition-all"
+            >
+               <div className="flex items-center justify-between mb-2">
+                  <div className="size-8 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center text-orange-500">
+                     <Target className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-bold text-muted-foreground">SCORE</span>
+               </div>
+               <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold gradient-text">{focusScore}</span>
+                  <span className="text-[10px] text-muted-foreground">/100</span>
+               </div>
+            </div>
+
+            {/* Saved Time - Navigates to Focus Mode */}
+            <div 
+              onClick={() => navigate('/')}
+              className="bg-emerald-50/50 dark:bg-emerald-900/10 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-800/20 flex flex-col justify-center cursor-pointer hover:bg-emerald-100/50 active:scale-95 transition-all"
+            >
+               <div className="flex items-center justify-between mb-2">
+                  <div className="size-8 rounded-full bg-white dark:bg-emerald-900/40 flex items-center justify-center text-emerald-500 shadow-sm">
+                     <Clock className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-600/70">SAVED</span>
+               </div>
+               {/* todaySavedHours is in hours */}
+               <span className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{formatHoursToTime(todaySavedHours)}</span>
+            </div>
+            
+             {/* Wasted Time - Navigates to Blocker */}
+            <div 
+              onClick={() => navigate('/blocker')}
+              className="bg-red-50/50 dark:bg-red-900/10 p-4 rounded-3xl border border-red-100 dark:border-red-800/20 flex flex-col justify-center cursor-pointer hover:bg-red-100/50 active:scale-95 transition-all"
+            >
+               <div className="flex items-center justify-between mb-2">
+                  <div className="size-8 rounded-full bg-white dark:bg-red-900/40 flex items-center justify-center text-red-500 shadow-sm">
+                     <Hourglass className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-bold text-red-600/70">WASTED</span>
+               </div>
+               {/* dailyUsage is in minutes, convert to readable time */}
+               <span className="text-xl font-bold text-red-700 dark:text-red-400">{formatMinutesToTime(dailyUsage)}</span>
+            </div>
+
+             {/* Tasks Done - Navigates to Tasks */}
+            <div 
+              onClick={() => navigate('/tasks')}
+              className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-4 rounded-3xl border border-border shadow-sm flex flex-col justify-center cursor-pointer hover:bg-white/80 active:scale-95 transition-all"
+            >
+               <div className="flex items-center justify-between mb-2">
+                  <div className="size-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-500">
+                     <Zap className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-bold text-muted-foreground">TASKS</span>
+               </div>
+               <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-foreground">{tasksCompleted}</span>
+                  <span className="text-[10px] text-muted-foreground">Done</span>
+               </div>
+            </div>
+
+        </section>
+
+        {/* Pro Insight - Compact Banner */}
+        <section className="animate-fade-up stagger-3">
+          <div className="relative rounded-2xl p-4 overflow-hidden border border-primary/20 bg-gradient-to-r from-primary/5 via-purple-500/5 to-transparent">
+             <div className="flex items-center gap-3">
+                <div className="size-8 rounded-lg bg-gradient-to-br from-yellow-300 to-orange-400 flex items-center justify-center shrink-0 shadow-md">
+                   <Lightbulb className="w-4 h-4 text-white fill-current" />
+                </div>
+                <div>
+                   <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-0.5">Insight</p>
+                   <p className="text-xs text-muted-foreground font-medium leading-snug line-clamp-2">
+                      {bestDay ? `Most productive on ${bestDay.day} mornings. Schedule deep work 8-11 AM.` : 'Track more sessions to get personalized insights.'}
+                   </p>
+                </div>
+             </div>
+          </div>
+        </section>
+
+      </div>
 
       <CalendarModal 
         isOpen={isCalendarOpen} 

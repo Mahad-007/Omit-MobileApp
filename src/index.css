@@ -17,28 +17,30 @@
 
 @layer base {
   :root {
-    /* Light Theme - Warm Ivory with Indigo accents */
-    --background: 240 10% 97%;
-    --foreground: 240 10% 10%;
+    /* Light Theme - Pure Minimal White */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
+    --card-foreground: 240 10% 3.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
+    --popover-foreground: 240 10% 3.9%;
 
-    /* Rich Indigo-Violet Primary */
-    --primary: 258 90% 66%;
+    /* Crisp Indigo Primary (High Contrast) */
+    --primary: 258 90% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 10% 94%;
-    --secondary-foreground: 240 10% 30%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 5.9% 10%;
 
-    --muted: 240 8% 93%;
-    --muted-foreground: 240 6% 45%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 3.8% 46.1%;
 
-    --accent: 240 10% 92%;
-    --accent-foreground: 240 10% 10%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 5.9% 10%;
+
+
 
     /* Warm Amber for achievements/highlights */
     --highlight: 38 92% 50%;

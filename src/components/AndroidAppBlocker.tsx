@@ -236,15 +236,10 @@ export function AndroidAppBlocker() {
           </div>
         )}
 
-        <div className="flex items-center justify-between p-3 bg-gradient-card rounded-lg border shadow-soft">
+        <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
           <div className="flex items-center gap-3">
-            <Shield className={`w-5 h-5 ${isMonitoring ? "text-primary" : "text-muted-foreground"}`} />
-            <div>
-              <p className="font-medium text-sm">App Blocking</p>
-              <p className="text-[10px] text-muted-foreground">
-                {isMonitoring ? "Active - blocking enabled" : "Inactive"}
-              </p>
-            </div>
+            <Shield className={isMonitoring ? "text-primary" : "text-muted-foreground"} size={20} />
+            <span className="font-medium text-sm">App Blocking</span>
           </div>
           <Switch
             checked={isMonitoring}
@@ -295,7 +290,6 @@ export function AndroidAppBlocker() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <Label className="text-sm font-medium leading-none block truncate">{app.appName}</Label>
-                    <p className="text-[10px] text-muted-foreground truncate mt-0.5">{app.packageName}</p>
                   </div>
                 </div>
                 

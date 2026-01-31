@@ -69,7 +69,7 @@ export const api = {
       dbUpdates.due_date = updates.dueDate;
       delete dbUpdates.dueDate;
     }
-    
+
     const { data, error } = await supabase
       .from('tasks')
       .update(dbUpdates)

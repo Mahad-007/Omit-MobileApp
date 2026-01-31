@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { storage, DailyStats } from "@/lib/storage";
+import { storage } from "@/lib/storage";
 import { 
   ChevronLeft, 
   ChevronRight, 
   Clock, 
   Hourglass, 
-  CheckCircle2 
+  CheckCircle2,
+  X
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CalendarModalProps {
   isOpen: boolean;
@@ -39,8 +41,24 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
   useEffect(() => {
     if (isOpen) {
       generateCalendarDays();
+      
+      // Subscribe to updates so the calendar reflects real-time changes
+      const unsubscribe = storage.onChange('stats', () => {
+        generateCalendarDays();
+      });
+      return unsubscribe;
     }
   }, [isOpen, currentDate]);
+
+  // Update selected day view when calendar days change (e.g. real-time update)
+  useEffect(() => {
+    if (selectedDay) {
+      const updatedDay = calendarDays.find(d => d.dateStr === selectedDay.dateStr);
+      if (updatedDay) {
+        setSelectedDay(updatedDay);
+      }
+    }
+  }, [calendarDays]);
 
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();
@@ -116,7 +134,9 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
   const formatTime = (hours: number) => {
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
-    return `${h}h ${m}m`;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
   };
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
@@ -126,33 +146,44 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 z-0 bg-background/80 backdrop-blur-sm transition-opacity duration-300"
+        onClick={onClose}
+      />
+
+      <div className="relative z-10 w-full max-w-[340px] bg-card border border-border rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+         {/* Top Gradient */}
+         <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3 relative z-10">
           <button 
             onClick={() => navigateMonth(-1)}
-            className="size-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+            className="size-8 flex items-center justify-center rounded-full bg-secondary hover:bg-secondary/80 transition-colors cursor-pointer"
           >
-            <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+            <ChevronLeft className="w-4 h-4 text-foreground" />
           </button>
-          <h3 className="text-lg font-bold">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+          
+          <h3 className="text-sm font-black tracking-widest uppercase text-foreground font-display">
+            {monthNames[currentDate.getMonth()]} <span className="text-primary">{currentDate.getFullYear()}</span>
           </h3>
+          
           <button 
             onClick={() => navigateMonth(1)}
-            className="size-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+            className="size-8 flex items-center justify-center rounded-full bg-secondary hover:bg-secondary/80 transition-colors cursor-pointer"
           >
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            <ChevronRight className="w-4 h-4 text-foreground" />
           </button>
         </div>
 
         {/* Calendar Grid */}
-        <div className="p-4 flex-1 overflow-auto">
+        <div className="px-4 pb-4 relative z-10">
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-1 mb-2">
             {dayNames.map(day => (
-              <div key={day} className="text-center text-[10px] font-bold text-muted-foreground uppercase">
+              <div key={day} className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 {day}
               </div>
             ))}
@@ -168,20 +199,28 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
                 <button
                   key={index}
                   onClick={() => setSelectedDay(day)}
-                  className={`
-                    aspect-square flex flex-col items-center justify-center rounded-lg text-sm transition-all
-                    ${!day.isCurrentMonth ? 'text-muted-foreground/40' : ''}
-                    ${day.isToday ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}
-                    ${isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}
-                    ${hasData && !isSelected ? 'bg-primary/10' : ''}
-                  `}
+                  className={cn(
+                    "aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-medium transition-all relative overflow-hidden group cursor-pointer h-9 w-full",
+                    !day.isCurrentMonth ? 'text-muted-foreground/30' : 'text-foreground/90',
+                    day.isToday && !isSelected ? 'border border-primary text-primary' : '',
+                    isSelected ? 'bg-primary text-primary-foreground shadow-lg scale-105 z-10 border-none' : 'hover:bg-secondary/50',
+                    hasData && !isSelected && !day.isToday ? 'bg-secondary/40' : ''
+                  )}
                 >
-                  <span className="font-medium">{day.date.getDate()}</span>
+                  <span className="relative z-10 text-[11px]">{day.date.getDate()}</span>
+                  
+                  {/* Indicators - minimal dots */}
                   {hasData && (
-                    <div className="flex gap-0.5 mt-0.5">
-                      {day.savedHours > 0 && <span className="size-1 rounded-full bg-emerald-400"></span>}
-                      {day.wastedHours > 0 && <span className="size-1 rounded-full bg-red-400"></span>}
-                      {day.tasksCompleted > 0 && <span className="size-1 rounded-full bg-primary"></span>}
+                    <div className="flex gap-0.5 mt-0.5 relative z-10">
+                      {day.savedHours > 0 && (
+                        <span className={cn("size-0.5 rounded-full", isSelected ? "bg-white" : "bg-emerald-500")} />
+                      )}
+                      {day.wastedHours > 0 && (
+                        <span className={cn("size-0.5 rounded-full", isSelected ? "bg-white" : "bg-red-500")} />
+                      )}
+                      {day.tasksCompleted > 0 && (
+                         <span className={cn("size-0.5 rounded-full", isSelected ? "bg-white" : "bg-blue-500")} />
+                      )}
                     </div>
                   )}
                 </button>
@@ -190,51 +229,56 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
           </div>
         </div>
 
-        {/* Selected Day Details */}
-        {selectedDay && (
-          <div className="p-4 border-t border-border bg-muted/30">
-            <h4 className="font-bold mb-3">
-              {selectedDay.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-            </h4>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg text-center">
-                <Clock className="w-5 h-5 text-emerald-400 mx-auto" />
-                <p className="text-xs text-muted-foreground mt-1">Saved</p>
-                <p className="font-bold text-emerald-400">{formatTime(selectedDay.savedHours)}</p>
-              </div>
-              <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center">
-                <Hourglass className="w-5 h-5 text-red-400 mx-auto" />
-                <p className="text-xs text-muted-foreground mt-1">Wasted</p>
-                <p className="font-bold text-red-400">{formatTime(selectedDay.wastedHours)}</p>
-              </div>
-              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg text-center">
-                <CheckCircle2 className="w-5 h-5 text-primary mx-auto" />
-                <p className="text-xs text-muted-foreground mt-1">Tasks</p>
-                <p className="font-bold text-primary">{selectedDay.tasksCompleted}</p>
-              </div>
+        {/* Selected Day Details Panel */}
+        <div className="bg-secondary/30 border-t border-border backdrop-blur-sm relative z-20">
+            {selectedDay ? (
+            <div className="p-4 animate-in slide-in-from-bottom-4 duration-300">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-foreground">
+                    {selectedDay.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                  </h4>
+                  <button onClick={() => setSelectedDay(null)} className="text-[10px] text-muted-foreground hover:text-foreground uppercase font-bold tracking-wider cursor-pointer">Close</button>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-xl text-center">
+                    <Clock className="w-3 h-3 text-emerald-500 mx-auto mb-1" />
+                    <p className="text-[8px] text-muted-foreground uppercase tracking-wider mb-0.5">Saved</p>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{formatTime(selectedDay.savedHours)}</p>
+                  </div>
+                  <div className="bg-red-500/10 border border-red-500/20 p-2 rounded-xl text-center">
+                    <Hourglass className="w-3 h-3 text-red-500 mx-auto mb-1" />
+                     <p className="text-[8px] text-muted-foreground uppercase tracking-wider mb-0.5">Wasted</p>
+                    <p className="text-xs font-bold text-red-600 dark:text-red-400">{formatTime(selectedDay.wastedHours)}</p>
+                  </div>
+                  <div className="bg-blue-500/10 border border-blue-500/20 p-2 rounded-xl text-center">
+                    <CheckCircle2 className="w-3 h-3 text-blue-500 mx-auto mb-1" />
+                     <p className="text-[8px] text-muted-foreground uppercase tracking-wider mb-0.5">Tasks</p>
+                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400">{selectedDay.tasksCompleted}</p>
+                  </div>
+                </div>
             </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="p-4 border-t border-border">
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-3">
-            <div className="flex items-center gap-1">
-              <span className="size-2 rounded-full bg-emerald-400"></span> Saved
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="size-2 rounded-full bg-red-400"></span> Wasted
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="size-2 rounded-full bg-primary"></span> Tasks
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-full py-3 bg-muted hover:bg-muted/80 text-foreground font-medium rounded-xl transition-colors"
-          >
-            Close
-          </button>
+            ) : (
+             <div className="p-3 flex items-center justify-between gap-2">
+                 <div className="flex gap-3 px-2 overflow-x-auto no-scrollbar">
+                     <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="size-1.5 rounded-full bg-emerald-500"></span>
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Saved</span>
+                     </div>
+                     <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="size-1.5 rounded-full bg-red-500"></span>
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Wasted</span>
+                     </div>
+                     <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="size-1.5 rounded-full bg-blue-500"></span>
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Tasks</span>
+                     </div>
+                 </div>
+                 <button onClick={onClose} className="shrink-0 size-7 rounded-full bg-secondary hover:bg-secondary/80 flex items-center justify-center transition-colors cursor-pointer">
+                     <X className="w-3 h-3 text-foreground" />
+                 </button>
+             </div>
+            )}
         </div>
       </div>
     </div>
