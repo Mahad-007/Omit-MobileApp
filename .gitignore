@@ -26,3 +26,4 @@ test_extension.py
 *.zip
 *.md
 *.py
+.env
