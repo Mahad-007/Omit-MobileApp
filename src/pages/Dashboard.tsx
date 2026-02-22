@@ -129,7 +129,10 @@ export default function Dashboard() {
     const session = storage.getActiveSession();
     if (session) {
       setFocusModeActive(true);
-      const remaining = Math.max(0, session.endTime - Date.now());
+      // Use remainingMs for paused sessions instead of stale endTime
+      const remaining = session.pausedAt
+        ? Math.max(0, session.remainingMs || 0)
+        : Math.max(0, session.endTime - Date.now());
       setTimeRemaining(Math.floor(remaining / 1000));
       setTotalSessionTime(session.duration * 60);
     } else {
@@ -161,6 +164,8 @@ export default function Dashboard() {
     const interval = setInterval(() => {
       const session = storage.getActiveSession();
       if (session) {
+        // Don't tick down if session is paused
+        if (session.pausedAt) return;
         const remaining = Math.max(0, session.endTime - Date.now());
         setTimeRemaining(Math.floor(remaining / 1000));
         if (remaining <= 0) {
@@ -178,13 +183,12 @@ export default function Dashboard() {
   }, [loadLocalData, onAndroid]);
 
   const toggleApp = async (id: string) => {
-    const app = blockedApps.find(a => a.id === id);
-    if (!app) return;
-    try {
-      await toggle.mutateAsync({ id, blocked: !app.isEnabled });
-    } catch (error) {
-      toast.error("Failed to toggle app");
+    // Use storage.toggleAppBlock to ensure local state and side effects (like extension sync) are handled
+    const updatedApp = storage.toggleAppBlock(id);
+    if (!updatedApp) {
+      toast.error("App not found");
     }
+    // No need to manually call toggle.mutateAsync, storage.toggleAppBlock handles the API call
   };
 
   const handleAddTask = async (newTask: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
@@ -201,7 +205,6 @@ export default function Dashboard() {
 
     try {
       await createTask.mutateAsync(newTask);
-      toast.success("Task added");
     } catch (error) {
       toast.error("Failed to create task");
     }
@@ -345,6 +348,7 @@ export default function Dashboard() {
       </section>
 
       {/* ===== BLOCKED APPS QUICK ACCESS ===== */}
+      {/* ===== BLOCKED APPS QUICK ACCESS ===== */}
       {(!onAndroid || (onAndroid && permissions?.allGranted)) && (
         <section className="animate-fade-up stagger-2 mb-8">
           <div className="flex items-center justify-between mb-4 px-6">
@@ -361,33 +365,79 @@ export default function Dashboard() {
           </div>
           
           <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 px-6 snap-x">
-            {blockedApps.slice(0, 5).map((app) => {
-              const iconData = appIcons[app.url] || { icon: Ban, color: 'bg-muted' };
-              return (
-                <button
-                  key={app.id}
-                  onClick={() => toggleApp(app.id)}
-                  className="flex flex-col items-center gap-2 min-w-[64px] snap-start"
-                >
-                  <div className={cn(
-                    "size-16 rounded-2xl flex items-center justify-center shadow-sm relative transition-all active:scale-90 duration-200 border border-transparent",
-                    app.isEnabled 
-                      ? "bg-white text-primary ring-2 ring-primary ring-offset-2 shadow-md" 
-                      : "bg-white text-muted-foreground border-border"
-                  )}>
-                    <iconData.icon className="w-7 h-7" />
-                    {app.isEnabled && (
-                      <div className="absolute -top-1 -right-1 size-5 bg-primary rounded-full flex items-center justify-center border-2 border-white">
-                        <CheckCircle2 className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-[10px] font-medium text-muted-foreground truncate w-full text-center">
-                    {app.url.split('.')[0]}
-                  </span>
-                </button>
-              );
-            })}
+            {onAndroid ? (
+              // Android: Show installed apps
+              installedApps.slice(0, 7).map((app) => {
+                 const isBlocked = app.blockMode !== 'off';
+                 return (
+                   <button 
+                     key={app.packageName}
+                     onClick={() => {
+                        let nextMode: 'off' | 'session' | 'persistent' = 'session';
+                        if (app.blockMode === 'session') nextMode = 'persistent';
+                        else if (app.blockMode === 'persistent') nextMode = 'off';
+                        storage.toggleAndroidApp(app.packageName, nextMode);
+                        // Force refresh local state
+                        loadInstalledApps();
+                     }}
+                     className="flex flex-col items-center gap-2 min-w-[64px] snap-start group"
+                   >
+                     <div className={cn(
+                       "size-16 rounded-2xl flex items-center justify-center shadow-sm relative transition-all active:scale-95 duration-200 border border-transparent",
+                       isBlocked ? "bg-white ring-2 ring-primary ring-offset-2 shadow-md" : "bg-white text-muted-foreground border-border opacity-70"
+                     )}>
+                        {app.icon ? (
+                          <img src={`data:image/png;base64,${app.icon}`} alt={app.appName} className="size-8 object-contain" />
+                        ) : (
+                          <Ban className="w-6 h-6 text-muted-foreground" />
+                        )}
+                        
+                        {/* Status Indicator Badge */}
+                        {isBlocked && (
+                          <div className={cn(
+                            "absolute -top-1 -right-1 size-5 rounded-full border-[2px] border-white flex items-center justify-center shadow-sm z-10",
+                            app.blockMode === 'persistent' ? "bg-red-500" : "bg-primary"
+                          )}>
+                             {app.blockMode === 'persistent' ? <Ban className="w-3 h-3 text-white" /> : <CheckCircle2 className="w-3 h-3 text-white" />}
+                          </div>
+                        )}
+                     </div>
+                     <span className="text-[10px] font-medium text-muted-foreground truncate w-full text-center px-1">
+                       {app.appName}
+                     </span>
+                   </button>
+                 );
+               })
+            ) : (
+              // Web: Show blocked URL apps
+              blockedApps.slice(0, 5).map((app) => {
+                const iconData = appIcons[app.url] || { icon: Ban, color: 'bg-muted' };
+                return (
+                  <button
+                    key={app.id}
+                    onClick={() => toggleApp(app.id)}
+                    className="flex flex-col items-center gap-2 min-w-[64px] snap-start"
+                  >
+                    <div className={cn(
+                      "size-16 rounded-2xl flex items-center justify-center shadow-sm relative transition-all active:scale-90 duration-200 border border-transparent",
+                      app.isEnabled 
+                        ? "bg-white text-primary ring-2 ring-primary ring-offset-2 shadow-md" 
+                        : "bg-white text-muted-foreground border-border"
+                    )}>
+                      <iconData.icon className="w-7 h-7" />
+                      {app.isEnabled && (
+                        <div className="absolute -top-1 -right-1 size-5 bg-primary rounded-full flex items-center justify-center border-2 border-white">
+                          <CheckCircle2 className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground truncate w-full text-center">
+                      {app.url.split('.')[0]}
+                    </span>
+                  </button>
+                );
+              })
+            )}
             
             {/* Add More Button */}
             <button

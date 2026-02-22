@@ -48,9 +48,9 @@ export default function Login() {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      // Trim inputs to avoid accidental whitespace
+      // Trim email to avoid accidental whitespace; keep password as-is (Bug 25 fix)
       const email = data.email.trim();
-      const password = data.password.trim();
+      const password = data.password;
 
       const { error } = await signIn(email, password);
       

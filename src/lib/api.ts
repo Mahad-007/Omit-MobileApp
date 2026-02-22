@@ -65,10 +65,21 @@ export const api = {
   updateTask: async (taskId: string, updates: Partial<Task>) => {
     const dbUpdates: any = { ...updates };
     
+    // Bug 17 fix: Properly convert all camelCase fields to snake_case
     if (updates.dueDate !== undefined) {
       dbUpdates.due_date = updates.dueDate;
       delete dbUpdates.dueDate;
     }
+    if (updates.createdAt !== undefined) {
+      dbUpdates.created_at = updates.createdAt;
+      delete dbUpdates.createdAt;
+    }
+    if (updates.completedAt !== undefined) {
+      dbUpdates.completed_at = updates.completedAt;
+      delete dbUpdates.completedAt;
+    }
+    // Remove id from updates (should not be sent to DB)
+    delete dbUpdates.id;
 
     const { data, error } = await supabase
       .from('tasks')
@@ -106,7 +117,7 @@ export const api = {
     // Map snake_case to camelCase
     return (data || []).map((app: any) => ({
       ...app,
-      isEnabled: app.blocked ?? app.is_enabled ?? false, // Prefer blocked, fallback to is_enabled just in case
+      isEnabled: app.is_enabled ?? app.blocked ?? false, // Prefer is_enabled (new schema), fallback to blocked
       blockMode: app.block_mode ?? app.blockMode ?? 'focus',
     })) as BlockedApp[];
   },
@@ -150,9 +161,18 @@ export const api = {
     const result = data as any;
     return {
       ...result,
-      isEnabled: result.blocked ?? result.is_enabled ?? false,
+      isEnabled: result.is_enabled ?? result.blocked ?? false,
       blockMode: result.block_mode ?? result.blockMode ?? 'focus',
     } as BlockedApp;
+  },
+
+  deleteBlockedApp: async (id: string) => {
+    const { error } = await supabase
+      .from('blocked_apps')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   },
 
   // Focus Sessions

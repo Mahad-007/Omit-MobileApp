@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { syncWithExtension } from '@/lib/extension-sync';
 import { storage } from '@/lib/storage';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 
 interface AuthContextType {
   user: User | null;
@@ -99,13 +101,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    });
-    return { error };
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const googleUser = await GoogleAuth.signIn();
+        
+        if (!googleUser?.authentication?.idToken) {
+            throw new Error('Google Sign-In failed: No ID token received');
+        }
+
+        const { idToken } = googleUser.authentication;
+        
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: idToken,
+        });
+        return { error };
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/`,
+          },
+        });
+        return { error };
+      }
+    } catch (error: any) {
+      console.error('Google Sign-In Error:', error);
+      // Construct a proper AuthError object
+      const authError = {
+        name: error.name || 'AuthError',
+        message: error.message || 'Failed to sign in with Google',
+        status: error.status || 500,
+        code: error.code || 'google_signin_error'
+      } as unknown as AuthError;
+      
+      return { error: authError };
+    }
   };
 
   return (

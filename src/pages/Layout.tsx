@@ -9,6 +9,7 @@ import {
   Timer, 
   Shield 
 } from "lucide-react";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 
 export default function Layout() {
   const location = useLocation();
@@ -55,9 +56,19 @@ export default function Layout() {
     return location.pathname.startsWith(path);
   };
 
+  const swipeHandlers = useSwipeNavigation({
+    routes: ['/', '/tasks', '/stats', '/settings'],
+    threshold: 50
+  });
+
   return (
     <div className="app-container bg-background min-h-screen">
-      <main className="flex-1">
+      <main 
+        className="flex-1"
+        onTouchStart={swipeHandlers.onTouchStart}
+        onTouchMove={swipeHandlers.onTouchMove}
+        onTouchEnd={swipeHandlers.onTouchEnd}
+      >
         <Outlet />
       </main>
 
