@@ -7,10 +7,16 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.util.Base64;
+import android.util.Log;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -21,15 +27,25 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import org.json.JSONException;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @CapacitorPlugin(name = "AppBlocker")
 public class AppBlockerPlugin extends Plugin {
 
+    private static final String PREFS_NAME = "OmitAppBlockerPrefs";
+    private static final String KEY_BLOCKED_APPS = "blocked_apps";
+    private static final String KEY_IS_MONITORING = "is_monitoring";
+
     private static List<String> blockedPackages = new ArrayList<>();
     private static boolean isMonitoring = false;
     private BroadcastReceiver usageReceiver;
+    private ExecutorService iconExecutor = Executors.newFixedThreadPool(2);
 
     public static List<String> getBlockedPackages() {
         return blockedPackages;
@@ -43,6 +59,12 @@ public class AppBlockerPlugin extends Plugin {
     public void load() {
         super.load();
         
+        // Load persisted state
+        android.content.SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        isMonitoring = prefs.getBoolean(KEY_IS_MONITORING, false);
+        Set<String> blockedSet = prefs.getStringSet(KEY_BLOCKED_APPS, new HashSet<>());
+        blockedPackages = new ArrayList<>(blockedSet);
+
         usageReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -59,11 +81,30 @@ public class AppBlockerPlugin extends Plugin {
         };
         
         IntentFilter filter = new IntentFilter("com.omit.app.USAGE_UPDATE");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-             getContext().registerReceiver(usageReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-             getContext().registerReceiver(usageReceiver, filter);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                 getContext().registerReceiver(usageReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                 getContext().registerReceiver(usageReceiver, filter);
+            }
+        } catch (Exception e) {
+            Log.e("AppBlockerPlugin", "Error registering receiver", e);
         }
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        if (usageReceiver != null) {
+            try {
+                getContext().unregisterReceiver(usageReceiver);
+            } catch (Exception e) {
+                // Already unregistered or error
+            }
+        }
+        if (iconExecutor != null) {
+            iconExecutor.shutdownNow();
+        }
+        super.handleOnDestroy();
     }
 
     @PluginMethod
@@ -71,16 +112,23 @@ public class AppBlockerPlugin extends Plugin {
         JSArray apps = call.getArray("apps");
         blockedPackages.clear();
         
+        Set<String> appSet = new HashSet<>();
         if (apps != null) {
             try {
                 for (int i = 0; i < apps.length(); i++) {
-                    blockedPackages.add(apps.getString(i));
+                    String pkg = apps.getString(i);
+                    blockedPackages.add(pkg);
+                    appSet.add(pkg);
                 }
             } catch (JSONException e) {
                 call.reject("Failed to parse blocked apps", e);
                 return;
             }
         }
+        
+        // Persist
+        android.content.SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putStringSet(KEY_BLOCKED_APPS, appSet).apply();
         
         JSObject result = new JSObject();
         result.put("count", blockedPackages.size());
@@ -90,6 +138,10 @@ public class AppBlockerPlugin extends Plugin {
     @PluginMethod
     public void startMonitoring(PluginCall call) {
         isMonitoring = true;
+        
+        // Persist
+        getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_IS_MONITORING, true).apply();
         
         // Start the overlay service
         Context context = getContext();
@@ -108,6 +160,10 @@ public class AppBlockerPlugin extends Plugin {
     @PluginMethod
     public void stopMonitoring(PluginCall call) {
         isMonitoring = false;
+        
+        // Persist
+        getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_IS_MONITORING, false).apply();
         
         // Stop the overlay service
         Context context = getContext();
@@ -168,8 +224,6 @@ public class AppBlockerPlugin extends Plugin {
         
         JSArray result = new JSArray();
         for (ApplicationInfo app : apps) {
-            // Filter to show only user-installed apps (not system apps)
-            // Or apps that have been updated system apps
             boolean isUserApp = (app.flags & ApplicationInfo.FLAG_SYSTEM) == 0 || (app.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
             
             if (isUserApp) {
@@ -177,9 +231,9 @@ public class AppBlockerPlugin extends Plugin {
                 appInfo.put("packageName", app.packageName);
                 appInfo.put("appName", pm.getApplicationLabel(app).toString());
                 
-                // Get Icon
+                // Return Base64 encoded icon
                 try {
-                    android.graphics.drawable.Drawable icon = pm.getApplicationIcon(app);
+                    Drawable icon = pm.getApplicationIcon(app);
                     String base64Icon = getBase64FromDrawable(icon);
                     appInfo.put("icon", base64Icon);
                 } catch (Exception e) {
@@ -194,33 +248,57 @@ public class AppBlockerPlugin extends Plugin {
         response.put("apps", result);
         call.resolve(response);
     }
-    
-    private String getBase64FromDrawable(android.graphics.drawable.Drawable drawable) {
+
+    @PluginMethod
+    public void getAppIcon(PluginCall call) {
+        String packageName = call.getString("packageName");
+        if (packageName == null) {
+            call.reject("Package name is required");
+            return;
+        }
+
+        iconExecutor.execute(() -> {
+            try {
+                PackageManager pm = getContext().getPackageManager();
+                Drawable icon = pm.getApplicationIcon(packageName);
+                String base64Icon = getBase64FromDrawable(icon);
+                
+                JSObject result = new JSObject();
+                result.put("icon", base64Icon);
+                call.resolve(result);
+            } catch (Exception e) {
+                Log.e("AppBlockerPlugin", "Error extracting icon for " + packageName, e);
+                call.reject("Failed to extract icon");
+            }
+        });
+    }
+
+    private String getBase64FromDrawable(Drawable drawable) {
         if (drawable == null) return "";
         
-        android.graphics.Bitmap bitmap;
-        if (drawable instanceof android.graphics.drawable.BitmapDrawable) {
-            bitmap = ((android.graphics.drawable.BitmapDrawable) drawable).getBitmap();
+        Bitmap bitmap;
+        if (drawable instanceof BitmapDrawable) {
+            bitmap = ((BitmapDrawable) drawable).getBitmap();
         } else {
             // Handle adaptive icons or other drawables
-            bitmap = android.graphics.Bitmap.createBitmap(
-                drawable.getIntrinsicWidth(), 
-                drawable.getIntrinsicHeight(), 
-                android.graphics.Bitmap.Config.ARGB_8888
+            bitmap = Bitmap.createBitmap(
+                drawable.getIntrinsicWidth() <= 0 ? 1 : drawable.getIntrinsicWidth(), 
+                drawable.getIntrinsicHeight() <= 0 ? 1 : drawable.getIntrinsicHeight(), 
+                Bitmap.Config.ARGB_8888
             );
-            android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+            Canvas canvas = new Canvas(bitmap);
             drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
             drawable.draw(canvas);
         }
         
-        // Resize to reduce payload size (e.g., 64x64 or 96x96)
+        // Resize to reduce payload size (e.g., 96x96)
         int size = 96;
-        android.graphics.Bitmap resized = android.graphics.Bitmap.createScaledBitmap(bitmap, size, size, true);
+        Bitmap resized = Bitmap.createScaledBitmap(bitmap, size, size, true);
         
-        java.io.ByteArrayOutputStream byteArrayOutputStream = new java.io.ByteArrayOutputStream();
-        resized.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        resized.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
         byte[] byteArray = byteArrayOutputStream.toByteArray();
-        return android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP);
+        return Base64.encodeToString(byteArray, Base64.NO_WRAP);
     }
 
     private boolean isAccessibilityServiceEnabled(Context context) {

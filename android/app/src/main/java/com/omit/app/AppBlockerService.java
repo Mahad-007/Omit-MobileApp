@@ -20,12 +20,13 @@ public class AppBlockerService extends AccessibilityService {
     private Set<String> launcherPackages;
     private long lastOverlayDismissedTime = 0;
     private static final long COOLDOWN_MS = 2000; // 2 second cooldown after overlay dismissed
-    
+
     // Debounce mechanism to wait for app to fully load
-    private Handler overlayHandler = new Handler(Looper.getMainLooper());
+    private final Handler overlayHandler = new Handler(Looper.getMainLooper());
     private Runnable pendingOverlayRunnable;
     private String pendingBlockedPackage = "";
-    private static final long DEBOUNCE_DELAY_MS = 800; // Wait 800ms for app to fully load
+    private static final long DEBOUNCE_DELAY_MS = 50; // Wait 50ms for app to fully load (reduced for instantaneous
+                                                      // blocking)
 
     // Usage Tracking
     private String currentPackage = "";
@@ -37,19 +38,27 @@ public class AppBlockerService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        // Ensure monitoring state is synced from prefs if not already active
         if (!AppBlockerPlugin.isMonitoringActive()) {
-            return;
+            android.content.SharedPreferences prefs = getSharedPreferences("OmitAppBlockerPrefs",
+                    android.content.Context.MODE_PRIVATE);
+            if (!prefs.getBoolean("is_monitoring", false)) {
+                return;
+            }
         }
 
-        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        int eventType = event.getEventType();
+        if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+                eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
             CharSequence packageNameSeq = event.getPackageName();
-            if (packageNameSeq == null) return;
-            
+            if (packageNameSeq == null)
+                return;
+
             String packageName = packageNameSeq.toString();
 
-             // --- USAGE TRACKING ---
+            // --- USAGE TRACKING ---
             long now = System.currentTimeMillis();
-            if (!packageName.equals(currentPackage)) {
+            if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && !packageName.equals(currentPackage)) {
                 if (lastAppChangeTime > 0 && !currentPackage.isEmpty()) {
                     long duration = now - lastAppChangeTime;
                     if (duration > 1000) { // Only track > 1 second
@@ -62,35 +71,55 @@ public class AppBlockerService extends AccessibilityService {
             // ----------------------
 
             List<String> blockedPackages = AppBlockerPlugin.getBlockedPackages();
-            
+
             // Don't block our own app - and reset state when in our app
             if (packageName.equals(getPackageName())) {
                 cancelPendingOverlay();
                 lastBlockedPackage = "";
                 return;
             }
-            
+
             // Reset when user goes to home/launcher
             if (launcherPackages != null && launcherPackages.contains(packageName)) {
                 cancelPendingOverlay();
                 lastBlockedPackage = "";
                 return;
             }
-            
+
             // Check if this package should be blocked
             if (blockedPackages.contains(packageName)) {
-                // If it's the same package that's pending, just reset the timer (debounce)
-                if (packageName.equals(pendingBlockedPackage)) {
-                    // Same package, reset debounce timer
-                    scheduleOverlay(packageName);
-                } else if (!packageName.equals(lastBlockedPackage)) {
-                    // New blocked package detected
-                    pendingBlockedPackage = packageName;
-                    scheduleOverlay(packageName);
+                // Only trigger the block overlay if the actual window state changed
+                // (e.g. app opened). Ignore notifications from blocked apps while we are
+                // elsewhere!
+                if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                    // If it's the same package that's pending, just reset the timer (debounce)
+                    if (packageName.equals(pendingBlockedPackage)) {
+                        // Same package, reset debounce timer
+                        scheduleOverlay(packageName);
+                    } else if (!packageName.equals(lastBlockedPackage)) {
+                        // New blocked package detected
+                        pendingBlockedPackage = packageName;
+                        scheduleOverlay(packageName);
+                    }
                 }
-            } else {
-                cancelPendingOverlay();
-                lastBlockedPackage = "";
+            } else if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                // ONLY cancel the pending overlay if we have transitioned to a NON-BLOCKED
+                // WINDOW.
+                // We ignore TYPE_NOTIFICATION_STATE_CHANGED here because notifications from
+                // other apps could otherwise cancel a legitimate block transition.
+
+                // CRITICAL FIX: Ignore System UI and android system package changes as they
+                // often fire transient window state changes that shouldn't cancel a real app
+                // block.
+                boolean isSystemPackage = packageName.equals("com.android.systemui") ||
+                        packageName.equals("android") ||
+                        packageName.equals("com.google.android.permissioncontroller") ||
+                        (launcherPackages != null && launcherPackages.contains(packageName));
+
+                if (!isSystemPackage) {
+                    cancelPendingOverlay();
+                    lastBlockedPackage = "";
+                }
             }
         }
     }
@@ -102,7 +131,7 @@ public class AppBlockerService extends AccessibilityService {
         intent.putExtra("duration", durationMs);
         sendBroadcast(intent);
     }
-    
+
     private void cancelPendingOverlay() {
         if (pendingOverlayRunnable != null) {
             overlayHandler.removeCallbacks(pendingOverlayRunnable);
@@ -110,25 +139,25 @@ public class AppBlockerService extends AccessibilityService {
         }
         pendingBlockedPackage = "";
     }
-    
+
     private void scheduleOverlay(String packageName) {
         // Cancel any existing pending overlay
         if (pendingOverlayRunnable != null) {
             overlayHandler.removeCallbacks(pendingOverlayRunnable);
         }
-        
+
         pendingOverlayRunnable = () -> {
             // Double-check cooldown and that we're still trying to block this package
             if (System.currentTimeMillis() - lastOverlayDismissedTime < COOLDOWN_MS) {
                 pendingBlockedPackage = "";
                 return;
             }
-            
+
             lastBlockedPackage = packageName;
             showBlockingOverlay(packageName);
             pendingBlockedPackage = "";
         };
-        
+
         // Schedule the overlay to appear after debounce delay
         overlayHandler.postDelayed(pendingOverlayRunnable, DEBOUNCE_DELAY_MS);
     }
@@ -139,7 +168,7 @@ public class AppBlockerService extends AccessibilityService {
         intent.setAction("SHOW_OVERLAY");
         startService(intent);
     }
-    
+
     // Called when overlay is dismissed to start cooldown
     public void onOverlayDismissed() {
         lastOverlayDismissedTime = System.currentTimeMillis();
@@ -156,19 +185,32 @@ public class AppBlockerService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         instance = this;
-        
+
         // Cache launcher packages for home screen detection
         launcherPackages = getLauncherPackages();
-        
+
+        // Load initial state from SharedPreferences in case plugin hasn't synced yet
+        android.content.SharedPreferences prefs = getSharedPreferences("OmitAppBlockerPrefs",
+                android.content.Context.MODE_PRIVATE);
+        java.util.Set<String> blockedSet = prefs.getStringSet("blocked_apps", new java.util.HashSet<>());
+        if (blockedSet != null && !blockedSet.isEmpty()) {
+            // Note: Plugin.blockedPackages is static, so we update it here if empty
+            if (AppBlockerPlugin.getBlockedPackages().isEmpty()) {
+                AppBlockerPlugin.getBlockedPackages().addAll(blockedSet);
+            }
+        }
+
         AccessibilityServiceInfo info = new AccessibilityServiceInfo();
-        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;
+        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED |
+                AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED |
+                AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
         info.notificationTimeout = 100;
         info.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS;
-        
+
         setServiceInfo(info);
     }
-    
+
     private Set<String> getLauncherPackages() {
         Set<String> launchers = new HashSet<>();
         Intent intent = new Intent(Intent.ACTION_MAIN);
@@ -182,6 +224,16 @@ public class AppBlockerService extends AccessibilityService {
 
     @Override
     public void onDestroy() {
+        // --- FINAL USAGE TRACKING ---
+        if (lastAppChangeTime > 0 && !currentPackage.isEmpty()) {
+            long now = System.currentTimeMillis();
+            long duration = now - lastAppChangeTime;
+            if (duration > 1000) {
+                sendUsageUpdate(currentPackage, duration);
+            }
+        }
+        // ---------------------------
+
         super.onDestroy();
         instance = null;
     }

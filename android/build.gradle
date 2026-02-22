@@ -23,7 +23,7 @@ allprojects {
         mavenCentral()
     }
     
-    // Force Java 17 compatibility for all modules (Capacitor 8 defaults to Java 21)
+    // Force Java 17 compatibility for all modules
     afterEvaluate { project ->
         if (project.hasProperty('android')) {
             project.android {
