@@ -327,7 +327,7 @@ export default function Stats() {
                   <span className="text-[10px] font-bold text-red-600/70">WASTED</span>
                </div>
                {/* dailyUsage is in minutes, convert to readable time */}
-               <span className="text-xl font-bold text-red-700 dark:text-red-400">{formatMinutesToTime(dailyUsage)}</span>
+               <span title={formatMinutesToTime(dailyUsage)} className="text-xl font-bold text-red-700 dark:text-red-400 truncate w-full block">{formatMinutesToTime(dailyUsage)}</span>
             </div>
 
              {/* Tasks Done - Navigates to Tasks */}

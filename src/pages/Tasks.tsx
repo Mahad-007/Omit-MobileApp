@@ -37,7 +37,6 @@ export default function Tasks() {
   const handleDeleteTask = async (id: string) => {
     try {
       await deleteTask.mutateAsync(id);
-      toast.success("Task deleted");
     } catch (error) {
       toast.error("Failed to delete task");
     }
@@ -46,7 +45,6 @@ export default function Tasks() {
   const handleAddTask = async (newTask: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
     try {
       await createTask.mutateAsync(newTask);
-      toast.success("Task added");
     } catch (error) {
       toast.error("Failed to create task");
     }
@@ -90,7 +88,8 @@ export default function Tasks() {
 
   // Filter Tasks
   const overdueTasks = tasks.filter(t => !t.completed && t.dueDate && isOverdue(t.dueDate) && !isToday(t.dueDate));
-  const todayTasks = tasks.filter(t => isToday(t.dueDate) || !t.dueDate);
+  // Bug 15 fix: Only show incomplete dateless tasks in Today; completed tasks without dates are excluded
+  const todayTasks = tasks.filter(t => isToday(t.dueDate) || (!t.dueDate && !t.completed));
   const tomorrowTasks = tasks.filter(t => isTomorrow(t.dueDate));
   const laterTasks = tasks.filter(t => 
     t.dueDate && !isToday(t.dueDate) && !isTomorrow(t.dueDate) && isUpcoming(t.dueDate) && !overdueTasks.includes(t)

@@ -31,7 +31,6 @@ export default function Settings() {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
     storage.saveSettings(newSettings);
-    toast.success("Settings saved!");
   };
 
   const handleSignOut = async () => {

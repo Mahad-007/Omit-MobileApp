@@ -45,14 +45,20 @@ export default function FocusTimer() {
       return;
     }
 
-    const remaining = session.endTime - Date.now();
-    if (remaining <= 0) {
-      finishSession();
-      return;
+    // Restore pause state from storage if the session was paused
+    if (session.pausedAt) {
+      setIsPaused(true);
+      setTimeRemaining(Math.floor((session.remainingMs || 0) / 1000));
+      setTotalTime(session.duration * 60);
+    } else {
+      const remaining = session.endTime - Date.now();
+      if (remaining <= 0) {
+        finishSession();
+        return;
+      }
+      setTimeRemaining(Math.floor(remaining / 1000));
+      setTotalTime(session.duration * 60);
     }
-
-    setTimeRemaining(Math.floor(remaining / 1000));
-    setTotalTime(session.duration * 60);
 
     const tasks = storage.getTasks();
     const incompleteTasks = tasks.filter(t => !t.completed);
@@ -318,7 +324,17 @@ export default function FocusTimer() {
         {/* Action Buttons */}
         <div className="flex gap-3 items-center">
           <button 
-            onClick={() => !strictMode && setIsPaused(!isPaused)}
+            onClick={() => {
+              if (strictMode) return;
+              if (!isPaused) {
+                // Bug 16 fix: Actually pause the session timer
+                storage.pauseFocusSession();
+                setIsPaused(true);
+              } else {
+                storage.resumeFocusSession();
+                setIsPaused(false);
+              }
+            }}
             disabled={strictMode}
             className={`flex-1 h-14 flex items-center justify-center gap-2 rounded-2xl font-semibold text-sm transition-all ${
               strictMode

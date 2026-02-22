@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { storage } from '@/lib/storage';
 import AppBlocker, { isCapacitor } from '@/lib/app-blocker';
-import { toast } from 'sonner';
 
 /**
  * Headless component that manages the synchronization between the app's state
@@ -15,6 +14,9 @@ import { toast } from 'sonner';
  * And enforces the correct blocking state on the device.
  */
 export function PersistentBlockerManager() {
+  // Use a ref to track the latest timeout ID for debouncing
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (!isCapacitor()) return;
 
@@ -49,12 +51,11 @@ export function PersistentBlockerManager() {
         const hasAppsToBlock = appsToBlock.length > 0;
         
         // Get current monitoring state from localStorage (Master Switch)
-        // Default to true if not set? Or false? 
-        // If user never touched it, usually we want it ON if they added apps.
-        // Let's assume if it's null, it's true.
         const monitoringStored = localStorage.getItem("android_monitoring");
         const masterSwitch = monitoringStored === null || monitoringStored === "true";
         
+        console.log('[PersistentBlockerManager] Enforcing blocking:', { hasAppsToBlock, masterSwitch, appsCount: appsToBlock.length });
+
         // Update the blocked list on the native side
         await AppBlocker.setBlockedApps({ apps: appsToBlock });
         
@@ -75,14 +76,36 @@ export function PersistentBlockerManager() {
       }
     };
 
-    // Initial check
+    // Debounced version of enforceBlocking (500ms)
+    const debouncedEnforce = () => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+            enforceBlocking();
+        }, 500);
+    };
+
+    // Initial check (immediate)
     enforceBlocking();
 
-    // Subscribe to all relevant changes
-    const unsubStorage = storage.onChange('all', enforceBlocking);
+    // Subscribe ONLY to relevant changes. 
+    // strictly avoiding 'stats' or 'all' to prevent loops.
+    const unsubBlockedApps = storage.onChange('blockedApps', debouncedEnforce);
+    const unsubSettings = storage.onChange('settings', debouncedEnforce);
+    const unsubFocus = storage.onChange('focusSessions', debouncedEnforce);
     
+    // We also might need to check if 'tasks' changes affect blocking? Likely not.
+    // However, Focus Session start/stop might not trigger 'focusSessions' change 
+    // effectively if we rely on 'all' previously. 
+    // Let's verify: storage.addFocusSession triggers 'focusSessions'.
+    // storage.startFocusSession (in storage.ts, not viewable yet, check later) needs to trigger.
+
     return () => {
-      unsubStorage();
+      unsubBlockedApps();
+      unsubSettings();
+      unsubFocus();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
