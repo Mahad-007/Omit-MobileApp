@@ -27,3 +27,17 @@ test_extension.py
 *.md
 *.py
 .env
+.env.*
+
+# Agent/skill files
+.agent/
+.agents/
+
+# Layout mockups
+Layouts/
+
+# Build logs
+build_err*.txt
+build_native_err*.txt
+build_stdout*.txt
+android/build_log.txt
