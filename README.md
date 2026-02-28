@@ -1,73 +1,184 @@
-# Welcome to your Lovable project
+# Omit
 
-## Project info
+A mobile-first productivity app that helps users stay focused by blocking distracting apps and websites during focus sessions. Built with React, Capacitor, and native Android services.
 
-**URL**: https://lovable.dev/projects/96b4deff-083e-45de-9ab0-78f34ba0e4ac
+## Features
 
-## How can I edit this code?
+- **Focus Sessions** — Start timed focus sessions with configurable durations and a visual countdown timer with pause/resume
+- **App & Website Blocking** — Block distracting websites (Instagram, TikTok, Twitter, YouTube, Reddit, etc.) and native Android apps during focus sessions or persistently
+- **Task Management** — Create, track, and complete tasks with priorities (High/Medium/Low), due dates, and Today/Upcoming views
+- **Productivity Stats** — Weekly focus hours charts, focus score, task completion metrics, and deep work breakdowns
+- **Strict Mode** — Prevents exiting blocked apps once a session starts
+- **Browser Extension Sync** — Communicates with a companion browser extension for cross-platform blocking
+- **Notifications** — Task reminders, focus session alerts, and persistent timer notifications
+- **Dark Mode** — Full light/dark theme support
+- **Authentication** — Email/password and Google OAuth via Supabase
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, TypeScript, Vite 7 |
+| Styling | Tailwind CSS, shadcn/ui, Radix UI, Lucide icons |
+| State | React Query (TanStack), React Context |
+| Forms | React Hook Form, Zod validation |
+| Backend | Supabase (PostgreSQL, Auth, Row-Level Security) |
+| Mobile | Capacitor 8 (Android) |
+| Native | Custom Java Accessibility Service + Overlay Service |
+| Charts | Recharts |
+| Deployment | Vercel (web), Capacitor (Android APK) |
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/96b4deff-083e-45de-9ab0-78f34ba0e4ac) and start prompting.
+## Project Structure
 
-Changes made via Lovable will be committed automatically to this repo.
+```
+src/
+├── pages/              # Route-level components
+│   ├── Dashboard.tsx       # Home screen with focus controls
+│   ├── FocusTimer.tsx      # Active session countdown
+│   ├── SocialBlocker.tsx   # Configure app/website blocking
+│   ├── Tasks.tsx           # Task management
+│   ├── Stats.tsx           # Analytics & productivity stats
+│   ├── Settings.tsx        # User preferences
+│   ├── Blocked.tsx         # Full-screen blocking overlay
+│   ├── Login.tsx           # Sign in
+│   ├── SignUp.tsx          # Registration
+│   └── ...
+├── components/         # Reusable UI components
+│   ├── AndroidAppBlocker.tsx       # Native Android app blocking UI
+│   ├── PersistentBlockerManager.tsx # Syncs blocking state to native
+│   ├── ProtectedRoute.tsx          # Auth guard
+│   ├── QuickAddTaskModal.tsx       # Quick task creation
+│   ├── ui/                         # shadcn/ui primitives (60+ components)
+│   └── ...
+├── contexts/
+│   └── AuthContext.tsx     # Auth state (sign in/up, OAuth, session)
+├── hooks/
+│   ├── use-mobile.tsx          # Mobile viewport detection
+│   ├── useSwipeNavigation.ts   # Swipe gesture routing
+│   └── useTaskNotifications.ts # Task reminder scheduling
+├── lib/
+│   ├── supabase.ts         # Supabase client init
+│   ├── api.ts              # React Query hooks (tasks, blocked apps, sessions)
+│   ├── storage.ts          # Hybrid storage (Capacitor Preferences + localStorage)
+│   ├── app-blocker.ts      # Native Android plugin interface
+│   └── extension-sync.ts   # Browser extension communication
+└── utils/
+    └── notifications.ts    # Notification scheduling & channels
 
-**Use your preferred IDE**
+android/
+└── app/src/main/java/com/omit/app/
+    ├── AppBlockerPlugin.java       # Capacitor plugin bridge
+    ├── AppBlockerService.java      # Accessibility service (monitors app switches)
+    ├── BlockingOverlayService.java # Overlay service (displays blocking screen)
+    └── MainActivity.java
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Getting Started
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Prerequisites
 
-Follow these steps:
+- Node.js 18+
+- npm
+- Android Studio (for mobile builds)
+
+### Installation
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Clone the repository
+git clone https://github.com/<your-username>/Omit-MobileApp.git
+cd Omit-MobileApp
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Install dependencies
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Create a .env file with your Supabase credentials
+# VITE_SUPABASE_URL=<your-supabase-url>
+# VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the dev server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app runs at `http://localhost:5173`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Android Build
 
-**Use GitHub Codespaces**
+```sh
+# Build the web app
+npm run build
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Sync to Android project
+npx cap sync android
 
-## What technologies are used for this project?
+# Open in Android Studio
+npx cap open android
+```
 
-This project is built with:
+**Required Android permissions** (configured in `AndroidManifest.xml`):
+- `SYSTEM_ALERT_WINDOW` — Blocking overlay
+- `PACKAGE_USAGE_STATS` — App usage monitoring
+- `QUERY_ALL_PACKAGES` — Installed app discovery
+- `POST_NOTIFICATIONS` — Focus/task notifications
+- Accessibility Service — App switch detection
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Database Schema
 
-## How can I deploy this project?
+The app uses four Supabase tables, all protected by Row-Level Security:
 
-Simply open [Lovable](https://lovable.dev/projects/96b4deff-083e-45de-9ab0-78f34ba0e4ac) and click on Share -> Publish.
+| Table | Purpose |
+|-------|---------|
+| `profiles` | User profiles (id, email, username) |
+| `tasks` | Tasks with title, description, priority, due date, completion status |
+| `blocked_apps` | Blocked websites/apps with name, URL, enabled state, and block mode (`always` or `focus`) |
+| `focus_sessions` | Recorded sessions with start time, duration, and apps blocked count |
 
-## Can I connect a custom domain to my Lovable project?
+The migration file is at `supabase_migration.sql`.
 
-Yes, you can!
+## Architecture
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```
+┌─────────────┐    postMessage    ┌───────────────────┐
+│  Browser     │◄────────────────►│  React Web App    │
+│  Extension   │                  │  (Vite + React)   │
+└─────────────┘                  └────────┬──────────┘
+                                          │
+                              ┌───────────┼───────────┐
+                              │    Capacitor Bridge    │
+                              └───────────┬───────────┘
+                                          │
+                         ┌────────────────┼────────────────┐
+                         │          Android Native          │
+                         │  ┌──────────────────────────┐   │
+                         │  │  Accessibility Service    │   │
+                         │  │  (monitors app switches)  │   │
+                         │  └────────────┬─────────────┘   │
+                         │               │                  │
+                         │  ┌────────────▼─────────────┐   │
+                         │  │  Overlay Service          │   │
+                         │  │  (displays block screen)  │   │
+                         │  └──────────────────────────┘   │
+                         └─────────────────────────────────┘
+                                          │
+                                          ▼
+                              ┌───────────────────────┐
+                              │  Supabase (Postgres)   │
+                              │  Auth + RLS + Storage  │
+                              └───────────────────────┘
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**State management strategy:**
+- **Global** — React Context for auth session
+- **Server** — React Query for tasks, blocked apps, focus sessions (cached, synced with Supabase)
+- **Local** — Capacitor Preferences + localStorage for settings and daily stats
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server on port 5173 |
+| `npm run build` | Production build to `dist/` |
+| `npm run lint` | Run ESLint |
+
+## License
+
+Private project — all rights reserved.
