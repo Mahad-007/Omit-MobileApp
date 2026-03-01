@@ -18,6 +18,8 @@ import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -45,7 +47,7 @@ public class AppBlockerPlugin extends Plugin {
     private static List<String> blockedPackages = new ArrayList<>();
     private static boolean isMonitoring = false;
     private BroadcastReceiver usageReceiver;
-    private ExecutorService iconExecutor = Executors.newFixedThreadPool(2);
+    private final ExecutorService iconExecutor = Executors.newFixedThreadPool(2);
 
     public static List<String> getBlockedPackages() {
         return blockedPackages;
@@ -85,7 +87,7 @@ public class AppBlockerPlugin extends Plugin {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                  getContext().registerReceiver(usageReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
             } else {
-                 getContext().registerReceiver(usageReceiver, filter);
+                ContextCompat.registerReceiver(getContext(), usageReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
             }
         } catch (Exception e) {
             Log.e("AppBlockerPlugin", "Error registering receiver", e);

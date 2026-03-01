@@ -192,6 +192,17 @@ export default function SignUp() {
               Sign in
             </Link>
           </div>
+
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors"
+            >
+              Continue as Guest
+            </button>
+            <p className="text-xs text-muted-foreground mt-1">All features work locally. Sign in to enable cloud sync.</p>
+          </div>
         </div>
 
         <div className="text-center text-sm text-muted-foreground">

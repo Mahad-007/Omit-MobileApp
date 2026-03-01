@@ -21,10 +21,12 @@
     </style>
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
- 
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash</item>
+        <!-- Solid white background — no full-screen image that can be cropped/rotated -->
         <item name="windowSplashScreenBackground">@android:color/white</item>
+        <!-- Small centred icon: use the launcher foreground, not the full-screen splash.png -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <!-- Optional: give the icon its own background circle -->
+        <item name="windowSplashScreenIconBackgroundColor">@color/colorPrimary</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

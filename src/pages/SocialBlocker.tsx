@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { storage, BlockedApp, Settings } from "@/lib/storage";
-import { useBlockedApps } from "@/lib/api";
+import { useLocalBlockedApps } from "@/hooks/useLocalData";
 import { toast } from "sonner";
 import { AndroidAppBlocker } from "@/components/AndroidAppBlocker";
 import AppBlocker, { isCapacitor, PermissionStatus } from "@/lib/app-blocker";
@@ -35,7 +35,7 @@ const triggerHaptic = (style: "light" | "medium" | "heavy" = "light") => {
 
 export default function SocialBlocker() {
   const navigate = useNavigate();
-  const { data: apps = [] } = useBlockedApps();
+  const { data: apps = [] } = useLocalBlockedApps();
   const [settings, setSettings] = useState<Settings>(storage.getSettings());
   const [focusDuration, setFocusDuration] = useState(25);
   const [focusModeActive, setFocusModeActive] = useState(false);
@@ -251,7 +251,7 @@ export default function SocialBlocker() {
       </main>
 
       {/* Start Button Container */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 pb-12 z-40 bg-gradient-to-t from-background via-background/90 to-transparent pt-12">
+      <div className="fixed bottom-0 left-0 right-0 p-6 pb-24 z-40 bg-gradient-to-t from-background via-background/90 to-transparent pt-12">
         <div className="max-w-md mx-auto">
           <button 
             onClick={startFocusSession}

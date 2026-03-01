@@ -6,16 +6,18 @@ import { useNavigate } from "react-router-dom";
 import { storage } from "@/lib/storage";
 import { Switch } from "@/components/ui/switch";
 import CustomTimeModal from "@/components/CustomTimeModal";
-import { 
-  ChevronLeft, 
-  User, 
-  Check, 
-  Moon, 
-  ShieldCheck, 
-  Timer, 
-  Ban, 
-  Bell, 
-  LogOut 
+import {
+  ChevronLeft,
+  User,
+  Check,
+  Moon,
+  ShieldCheck,
+  Timer,
+  Ban,
+  Bell,
+  LogOut,
+  LogIn,
+  Cloud
 } from "lucide-react";
 
 export default function Settings() {
@@ -36,13 +38,15 @@ export default function Settings() {
   const handleSignOut = async () => {
     try {
       await signOut();
+      navigate('/login');
       toast.success("Signed out successfully");
     } catch (error) {
       toast.error("Failed to sign out");
     }
   };
 
-  const userName = user?.email?.split('@')[0] || 'User';
+  const isGuest = !user;
+  const userName = user?.email?.split('@')[0] || 'Guest';
   const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
   return (
@@ -68,21 +72,27 @@ export default function Settings() {
 
       <main className="flex-1 px-4 pt-6 max-w-lg mx-auto w-full space-y-5 animate-fade-in relative z-10">
         
-        {/* Profile Card - Full Width for better presence */}
+        {/* Profile Card */}
         <section className="bg-card/40 backdrop-blur-xl rounded-[32px] p-6 border border-white/10 shadow-sm relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-100" />
           <div className="flex items-center gap-5 relative z-10">
             <div className="relative shrink-0">
-              <div className="size-16 rounded-[20px] bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center text-white shadow-lg shadow-primary/20 ring-4 ring-white/5">
+              <div className={`size-16 rounded-[20px] flex items-center justify-center text-white shadow-lg ring-4 ring-white/5 ${isGuest ? 'bg-gradient-to-br from-muted-foreground to-slate-600' : 'bg-gradient-to-br from-primary to-violet-600 shadow-primary/20'}`}>
                 <User className="w-8 h-8" />
               </div>
-              <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-emerald-500 border-4 border-card flex items-center justify-center shadow-sm">
-                <Check className="w-3 h-3 text-white stroke-[4px]" />
-              </div>
+              {!isGuest && (
+                <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-emerald-500 border-4 border-card flex items-center justify-center shadow-sm">
+                  <Check className="w-3 h-3 text-white stroke-[4px]" />
+                </div>
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="font-bold text-xl truncate leading-tight tracking-tight">{displayName}</h2>
-              <p className="text-muted-foreground text-sm truncate font-medium opacity-80 mt-1">{user?.email}</p>
+              {isGuest ? (
+                <p className="text-muted-foreground text-sm font-medium opacity-80 mt-1">Sign in to enable cloud sync</p>
+              ) : (
+                <p className="text-muted-foreground text-sm truncate font-medium opacity-80 mt-1">{user?.email}</p>
+              )}
             </div>
           </div>
         </section>
@@ -238,14 +248,30 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Sign Out Button */}
-        <button 
-          onClick={handleSignOut}
-          className="w-full bg-red-500/5 backdrop-blur-md rounded-[24px] p-4 border border-red-500/10 shadow-sm flex items-center justify-center gap-2 group hover:bg-red-500 hover:text-white transition-all duration-300"
-        >
-          <LogOut className="w-5 h-5 text-red-500 group-hover:text-white transition-colors" />
-          <span className="text-sm font-bold text-red-500 group-hover:text-white transition-colors">Sign Out</span>
-        </button>
+        {/* Auth Button */}
+        {isGuest ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 px-1 py-2 bg-primary/5 rounded-2xl border border-primary/10">
+              <Cloud className="w-5 h-5 text-primary ml-3 shrink-0" />
+              <p className="text-xs text-muted-foreground">Sign in to back up your data and sync across devices.</p>
+            </div>
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full bg-primary/10 backdrop-blur-md rounded-[24px] p-4 border border-primary/20 shadow-sm flex items-center justify-center gap-2 group hover:bg-primary hover:text-white transition-all duration-300"
+            >
+              <LogIn className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
+              <span className="text-sm font-bold text-primary group-hover:text-white transition-colors">Sign In / Create Account</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleSignOut}
+            className="w-full bg-red-500/5 backdrop-blur-md rounded-[24px] p-4 border border-red-500/10 shadow-sm flex items-center justify-center gap-2 group hover:bg-red-500 hover:text-white transition-all duration-300"
+          >
+            <LogOut className="w-5 h-5 text-red-500 group-hover:text-white transition-colors" />
+            <span className="text-sm font-bold text-red-500 group-hover:text-white transition-colors">Sign Out</span>
+          </button>
+        )}
 
       </main>
 

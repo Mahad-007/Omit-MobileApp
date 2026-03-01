@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { storage, DailyStats, Settings } from "@/lib/storage";
-import { useTasks } from "@/lib/api";
+import { useLocalTasks } from "@/hooks/useLocalData";
 import CalendarModal from "@/components/CalendarModal";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -31,7 +31,7 @@ interface WeeklyData {
 
 export default function Stats() {
   const navigate = useNavigate();
-  const { data: tasks = [] } = useTasks();
+  const { data: tasks = [] } = useLocalTasks();
 
   const [weeklyFocusHours, setWeeklyFocusHours] = useState(0);
   const [focusHoursChange, setFocusHoursChange] = useState(0);
