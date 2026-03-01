@@ -635,6 +635,25 @@
    ANIMATION UTILITIES
    ============================================ */
 
+/* ── Tab swipe page transitions ─────────────────────────────────────────── */
+@keyframes page-slide-from-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0);    }
+}
+
+@keyframes page-slide-from-left {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0);     }
+}
+
+.page-enter-from-right {
+  animation: page-slide-from-right 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.page-enter-from-left {
+  animation: page-slide-from-left 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
 .animate-fade-up {
   animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

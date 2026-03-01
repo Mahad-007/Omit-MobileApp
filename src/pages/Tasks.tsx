@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Task } from "@/lib/storage";
-import { useTasks } from "@/lib/api";
+import { useLocalTasks } from "@/hooks/useLocalData";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import QuickAddTaskModal from "@/components/QuickAddTaskModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -18,8 +17,7 @@ import {
 
 export default function Tasks() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { data: tasks = [], isLoading, createTask, updateTask, deleteTask } = useTasks();
+  const { data: tasks = [], isLoading, createTask, updateTask, deleteTask } = useLocalTasks();
   const [activeTab, setActiveTab] = useState<'today' | 'upcoming'>('today');
   const [showAddModal, setShowAddModal] = useState(false);
 

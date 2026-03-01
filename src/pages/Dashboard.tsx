@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { storage, Settings } from "@/lib/storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTasks, useBlockedApps } from "@/lib/api";
+import { useLocalTasks, useLocalBlockedApps } from "@/hooks/useLocalData";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import AppBlocker, { isCapacitor, AppInfo, PermissionStatus } from "@/lib/app-blocker";
@@ -58,8 +58,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   
   // Data from React Query
-  const { data: tasks = [], createTask } = useTasks();
-  const { data: blockedApps = [], toggle } = useBlockedApps();
+  const { data: tasks = [], createTask } = useLocalTasks();
+  const { data: blockedApps = [] } = useLocalBlockedApps();
   
   const [showAddModal, setShowAddModal] = useState(false);
   
@@ -318,11 +318,23 @@ export default function Dashboard() {
                      </span>
                   ) : (
                     <div className="flex -space-x-3">
-                       {[...Array(3)].map((_, i) => (
-                          <div key={i} className={cn("w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold", focusModeActive ? "border-black bg-gray-800" : "border-white bg-gray-100")}>
-                             {i === 2 ? `+${enabledApps.length > 2 ? enabledApps.length - 2 : 1}` : <Ban className="w-3 h-3 text-muted-foreground" />}
-                          </div>
-                       ))}
+                       {[...Array(3)].map((_, i) => {
+                          if (i === 2) {
+                            return (
+                              <div key={i} className={cn("w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold", "border-white bg-gray-100")}>
+                                +{enabledApps.length > 2 ? enabledApps.length - 2 : 1}
+                              </div>
+                            );
+                          }
+                          const app = enabledApps[i];
+                          const iconData = app ? appIcons[app.url] : null;
+                          const IconComp = iconData?.icon;
+                          return (
+                            <div key={i} className={cn("w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold overflow-hidden border-white", iconData ? iconData.color : "bg-gray-100")}>
+                              {IconComp ? <IconComp className="w-4 h-4 text-white" /> : <Ban className="w-3 h-3 text-muted-foreground" />}
+                            </div>
+                          );
+                       })}
                     </div>
                   )}
                   <span className={cn("text-xs mt-2 font-medium self-start px-2 py-0.5 rounded-full", focusModeActive ? "bg-white/10 text-white/80" : "bg-primary/10 text-primary")}>
@@ -364,7 +376,7 @@ export default function Dashboard() {
             </button>
           </div>
           
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 px-6 snap-x">
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pt-5 pb-2 px-6 snap-x">
             {onAndroid ? (
               // Android: Show installed apps
               installedApps.slice(0, 7).map((app) => {

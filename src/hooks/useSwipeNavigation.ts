@@ -1,48 +1,98 @@
-import { useState, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 
 interface SwipeConfig {
   threshold?: number;
   routes: string[];
+  /** Called every touchmove with the current horizontal offset in px */
+  onDrag?: (offsetX: number) => void;
+  /** Called when a swipe exceeds the threshold — caller should navigate */
+  onNavigate?: (route: string, direction: "left" | "right") => void;
+  /** Called when a swipe is cancelled (below threshold or vertical) */
+  onCancel?: () => void;
 }
 
-export function useSwipeNavigation({ threshold = 50, routes }: SwipeConfig) {
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const navigate = useNavigate();
+export function useSwipeNavigation({
+  threshold = 55,
+  routes,
+  onDrag,
+  onNavigate,
+  onCancel,
+}: SwipeConfig) {
   const location = useLocation();
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
+  // All touch data lives in refs so touchmove never triggers a re-render
+  const startX = useRef<number | null>(null);
+  const startY = useRef<number | null>(null);
+  const isHorizontal = useRef<boolean | null>(null);
+  const deltaRef = useRef(0);
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    startX.current = e.targetTouches[0].clientX;
+    startY.current = e.targetTouches[0].clientY;
+    isHorizontal.current = null;
+    deltaRef.current = 0;
+  }, []);
+
+  const onTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (startX.current === null || startY.current === null) return;
+
+      const dx = e.targetTouches[0].clientX - startX.current;
+      const dy = e.targetTouches[0].clientY - startY.current;
+
+      // Wait for a clear directional signal before committing
+      if (isHorizontal.current === null) {
+        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+        isHorizontal.current = Math.abs(dx) > Math.abs(dy);
+      }
+
+      if (!isHorizontal.current) return;
+
+      const currentIndex = routes.indexOf(location.pathname);
+
+      // Rubber-band effect at the first/last tab
+      let offset = dx;
+      if (
+        (dx > 0 && currentIndex === 0) ||
+        (dx < 0 && currentIndex === routes.length - 1)
+      ) {
+        offset = dx * 0.15;
+      }
+
+      deltaRef.current = offset;
+      onDrag?.(offset);
+    },
+    [location.pathname, routes, onDrag]
+  );
 
   const onTouchEnd = useCallback(() => {
-    if (!touchStart || !touchEnd) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > threshold;
-    const isRightSwipe = distance < -threshold;
-
-    const currentIndex = routes.indexOf(location.pathname);
-    if (currentIndex === -1) return;
-
-    if (isLeftSwipe && currentIndex < routes.length - 1) {
-      // Swiping left to go to next tab
-      navigate(routes[currentIndex + 1]);
-    } else if (isRightSwipe && currentIndex > 0) {
-      // Swiping right to go to previous tab
-      navigate(routes[currentIndex - 1]);
+    if (!isHorizontal.current) {
+      onCancel?.();
+      reset();
+      return;
     }
-  }, [touchStart, touchEnd, threshold, navigate, location.pathname, routes]);
 
-  return {
-    onTouchStart,
-    onTouchMove,
-    onTouchEnd,
-  };
+    const delta = deltaRef.current;
+    const currentIndex = routes.indexOf(location.pathname);
+
+    if (delta < -threshold && currentIndex < routes.length - 1) {
+      onNavigate?.(routes[currentIndex + 1], "left");
+    } else if (delta > threshold && currentIndex > 0) {
+      onNavigate?.(routes[currentIndex - 1], "right");
+    } else {
+      onCancel?.();
+    }
+
+    reset();
+  }, [location.pathname, routes, threshold, onNavigate, onCancel]);
+
+  function reset() {
+    startX.current = null;
+    startY.current = null;
+    isHorizontal.current = null;
+    deltaRef.current = 0;
+  }
+
+  return { onTouchStart, onTouchMove, onTouchEnd };
 }
