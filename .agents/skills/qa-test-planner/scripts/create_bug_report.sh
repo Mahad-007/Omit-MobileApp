@@ -29,10 +29,10 @@ prompt_input() {
         read -r input
         
         if [ -n "$input" ]; then
-            eval "$var_name=\"$input\""
+            printf -v "$var_name" '%s' "$input"
             break
         elif [ "$required" != "true" ]; then
-            eval "$var_name=\"\""
+            printf -v "$var_name" '%s' ''
             break
         else
             echo -e "${RED}This field is required.${NC}"
@@ -115,7 +115,9 @@ while true; do
     if [ -z "$line" ]; then
         break
     fi
-    REPRO_STEPS="${REPRO_STEPS}${STEP_NUM}. ${line}\n"
+    REPRO_STEPS="${REPRO_STEPS}${STEP_NUM}. ${line}"
+    REPRO_STEPS="${REPRO_STEPS}
+"
     ((STEP_NUM++))
 done
 
@@ -137,11 +139,38 @@ prompt_input "Related test case ID:" TEST_CASE false
 prompt_input "Figma design link (if UI bug):" FIGMA_LINK false
 prompt_input "First noticed (date/build):" FIRST_NOTICED false
 
+# Bug/Test Type
+echo ""
+echo "Bug/Test Type:"
+echo "1) Functional"
+echo "2) UI/Visual"
+echo "3) Performance"
+echo "4) Security"
+echo ""
+
+prompt_input "Select type (1-4):" TYPE_NUM false
+
+case $TYPE_NUM in
+    1) TEST_TYPE="Functional" ;;
+    2) TEST_TYPE="UI/Visual" ;;
+    3) TEST_TYPE="Performance" ;;
+    4) TEST_TYPE="Security" ;;
+    *) TEST_TYPE="Functional" ;;
+esac
+
 FILENAME="${BUG_ID}.md"
 
 OUTPUT_DIR="."
 if [ ! -z "$1" ]; then
     OUTPUT_DIR="$1"
+fi
+
+# Validate/create OUTPUT_DIR
+if [ ! -d "$OUTPUT_DIR" ]; then
+    if ! mkdir -p "$OUTPUT_DIR" 2>/dev/null; then
+        echo -e "${RED}Error: Cannot create output directory: $OUTPUT_DIR${NC}"
+        exit 1
+    fi
 fi
 
 OUTPUT_FILE="$OUTPUT_DIR/$FILENAME"
