@@ -254,17 +254,17 @@ export default function Dashboard() {
     <div className="flex flex-col min-h-screen pb-24 relative overflow-hidden bg-background">
       {/* Background Gradient Mesh */}
       <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
-      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/20 blur-[100px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-sky-500/10 blur-[100px] rounded-full pointer-events-none translate-y-1/2 -translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-[min(300px,80vw)] h-[min(300px,80vw)] bg-primary/20 blur-[100px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2 animate-gentle-float" style={{ animationDuration: '11s' }} />
+      <div className="absolute bottom-0 left-0 w-[min(300px,80vw)] h-[min(300px,80vw)] bg-sky-500/10 blur-[100px] rounded-full pointer-events-none translate-y-1/2 -translate-x-1/2 animate-gentle-float" style={{ animationDuration: '14s', animationDelay: '3s' }} />
 
       {/* Header Section */}
-      <header className="relative flex items-center safe-area-top pt-8 px-6 pb-6 justify-between animate-fade-up z-10">
+      <header className="relative flex items-center safe-area-top pt-8 tablet:pt-10 px-6 tablet:px-10 pb-6 justify-between animate-fade-up z-10">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
             <GreetingIcon className="w-4 h-4" />
             <span>{greeting}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight gradient-text">
+          <h1 className="font-bold tracking-tight gradient-text" style={{ fontSize: 'clamp(1.5rem, 7vw, 1.875rem)' }}>
             {displayName}
           </h1>
         </div>
@@ -281,10 +281,10 @@ export default function Dashboard() {
       </header>
 
       {/* ===== FOCUS STATUS HERO CARD ===== */}
-      <section className="px-6 mb-8 animate-fade-up stagger-1 z-10 relative">
-        <div 
+      <section className="px-6 tablet:px-10 mb-8 animate-fade-up stagger-1 z-10 relative">
+        <div
           className={cn(
-            "relative overflow-hidden rounded-3xl p-6 transition-all duration-300 group",
+            "relative overflow-hidden rounded-3xl p-6 tablet:p-8 transition-all duration-300 group",
             focusModeActive 
               ? "bg-black text-white shadow-glow-lg" 
               : "zen-card"
@@ -295,7 +295,7 @@ export default function Dashboard() {
              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-900 animate-aurora opacity-50" />
           )}
 
-          <div className="relative z-10 flex flex-col gap-6">
+          <div className="relative z-10 flex flex-col gap-6 tablet:gap-8">
             <div className="flex items-start justify-between">
                <div className="flex flex-col gap-1">
                   <h2 className={cn("text-lg font-bold", focusModeActive ? "text-white" : "text-foreground")}>
@@ -363,9 +363,9 @@ export default function Dashboard() {
       {/* ===== BLOCKED APPS QUICK ACCESS ===== */}
       {(!onAndroid || (onAndroid && permissions?.allGranted)) && (
         <section className="animate-fade-up stagger-2 mb-8">
-          <div className="flex items-center justify-between mb-4 px-6">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-               <Shield className="w-4 h-4 text-primary" />
+          <div className="flex items-center justify-between mb-4 px-6 tablet:px-10">
+            <h3 className="text-sm tablet:text-base font-bold text-foreground flex items-center gap-2">
+               <Shield className="w-4 h-4 tablet:w-5 tablet:h-5 text-primary" />
                Blocked Apps
             </h3>
             <button 
@@ -376,7 +376,7 @@ export default function Dashboard() {
             </button>
           </div>
           
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pt-5 pb-2 px-6 snap-x">
+          <div className="flex tablet:grid tablet:grid-cols-8 gap-4 tablet:gap-5 overflow-x-auto tablet:overflow-x-visible no-scrollbar pt-5 pb-2 px-6 tablet:px-10 snap-x">
             {onAndroid ? (
               // Android: Show installed apps
               installedApps.slice(0, 7).map((app) => {
@@ -392,10 +392,10 @@ export default function Dashboard() {
                         // Force refresh local state
                         loadInstalledApps();
                      }}
-                     className="flex flex-col items-center gap-2 min-w-[64px] snap-start group"
+                     className="flex flex-col items-center gap-2 min-w-[64px] tablet:min-w-[80px] snap-start group"
                    >
                      <div className={cn(
-                       "size-16 rounded-2xl flex items-center justify-center shadow-sm relative transition-all active:scale-95 duration-200 border border-transparent",
+                       "size-16 tablet:size-20 rounded-2xl flex items-center justify-center shadow-sm relative transition-all active:scale-95 duration-200 border border-transparent",
                        isBlocked ? "bg-white ring-2 ring-primary ring-offset-2 shadow-md" : "bg-white text-muted-foreground border-border opacity-70"
                      )}>
                         {app.icon ? (
@@ -428,7 +428,7 @@ export default function Dashboard() {
                   <button
                     key={app.id}
                     onClick={() => toggleApp(app.id)}
-                    className="flex flex-col items-center gap-2 min-w-[64px] snap-start"
+                    className="flex flex-col items-center gap-2 min-w-[64px] tablet:min-w-[80px] snap-start"
                   >
                     <div className={cn(
                       "size-16 rounded-2xl flex items-center justify-center shadow-sm relative transition-all active:scale-90 duration-200 border border-transparent",
@@ -454,7 +454,7 @@ export default function Dashboard() {
             {/* Add More Button */}
             <button
               onClick={() => navigate('/blocker')}
-              className="flex flex-col items-center gap-2 min-w-[64px] snap-start"
+              className="flex flex-col items-center gap-2 min-w-[64px] tablet:min-w-[80px] snap-start"
             >
               <div className="size-16 rounded-2xl bg-muted/50 border-2 border-dashed border-border flex items-center justify-center active:scale-95 transition-all hover:border-primary/50 hover:bg-primary/5">
                 <Plus className="w-6 h-6 text-muted-foreground" />
@@ -466,38 +466,38 @@ export default function Dashboard() {
       )}
 
       {/* ===== STATS ROW ===== */}
-      <section className="px-6 mb-8 animate-fade-up stagger-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="zen-card p-5 flex flex-col justify-between h-32 relative overflow-hidden group">
+      <section className="px-6 tablet:px-10 mb-8 animate-fade-up stagger-3">
+          <div className="grid grid-cols-2 gap-4 tablet:gap-6">
+            <div className="zen-card p-5 tablet:p-6 flex flex-col justify-between min-h-[7rem] tablet:min-h-[8.5rem] relative overflow-hidden group">
                 <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                   <Timer className="w-16 h-16" />
+                   <Timer className="w-16 h-16 tablet:w-20 tablet:h-20" />
                 </div>
                 <div className="flex items-center gap-2">
                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full text-indigo-600 dark:text-indigo-400">
-                      <Timer className="w-4 h-4" />
+                      <Timer className="w-4 h-4 tablet:w-5 tablet:h-5" />
                    </div>
-                   <span className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Focus Time</span>
+                   <span className="text-muted-foreground text-xs tablet:text-sm font-bold uppercase tracking-wider">Focus Time</span>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-foreground tracking-tight">
-                      {focusHours.toFixed(1)}<span className="text-sm text-muted-foreground font-medium ml-1">h</span>
+                  <p className="text-3xl tablet:text-4xl font-bold text-foreground tracking-tight">
+                      {focusHours.toFixed(1)}<span className="text-sm tablet:text-base text-muted-foreground font-medium ml-1">h</span>
                   </p>
                 </div>
             </div>
 
-            <div className="zen-card p-5 flex flex-col justify-between h-32 relative overflow-hidden group">
+            <div className="zen-card p-5 tablet:p-6 flex flex-col justify-between min-h-[7rem] tablet:min-h-[8.5rem] relative overflow-hidden group">
                 <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                   <Shield className="w-16 h-16" />
+                   <Shield className="w-16 h-16 tablet:w-20 tablet:h-20" />
                 </div>
                 <div className="flex items-center gap-2">
                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-full text-emerald-600 dark:text-emerald-400">
-                      <Shield className="w-4 h-4" />
+                      <Shield className="w-4 h-4 tablet:w-5 tablet:h-5" />
                    </div>
-                   <span className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Protected</span>
+                   <span className="text-muted-foreground text-xs tablet:text-sm font-bold uppercase tracking-wider">Protected</span>
                 </div>
                 <div>
-                   <p className="text-3xl font-bold text-foreground tracking-tight">
-                      {enabledApps.length} <span className="text-sm text-muted-foreground font-medium">apps</span>
+                   <p className="text-3xl tablet:text-4xl font-bold text-foreground tracking-tight">
+                      {enabledApps.length} <span className="text-sm tablet:text-base text-muted-foreground font-medium">apps</span>
                    </p>
                 </div>
             </div>
@@ -505,7 +505,7 @@ export default function Dashboard() {
       </section>
 
       {/* ===== TASKS SECTION ===== */}
-      <section className="px-6 mb-24 animate-fade-up stagger-4">
+      <section className="px-6 tablet:px-10 mb-24 animate-fade-up stagger-4">
         <div className="flex items-center justify-between mb-4">
            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-primary" />

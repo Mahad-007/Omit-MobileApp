@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import { PersistentBlockerManager } from "@/components/PersistentBlockerManager";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 
 
@@ -141,6 +142,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <div className="min-h-screen bg-background font-sans text-foreground antialiased safe-area-top safe-area-bottom selection:bg-primary/20">
+            <ErrorBoundary>
             <BrowserRouter
               future={{
                 v7_startTransition: true,
@@ -177,6 +179,7 @@ const App = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
+            </ErrorBoundary>
           </div>
         </AuthProvider>
       </TooltipProvider>

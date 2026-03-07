@@ -124,7 +124,7 @@ export class NotificationManager {
           {
             title,
             body,
-            id: Math.floor(Math.random() * 100000) + 2000,
+            id: Math.floor(Math.random() * 999) + 1,
             schedule: { at: new Date(Date.now() + 1000), allowWhileIdle: true },
             channelId: "omit-notifications",
             sound: "res://platform_default",

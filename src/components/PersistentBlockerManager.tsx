@@ -76,14 +76,15 @@ export function PersistentBlockerManager() {
       }
     };
 
-    // Debounced version of enforceBlocking (500ms)
+    // Debounced version of enforceBlocking (100ms is enough to coalesce rapid
+    // consecutive changes without introducing noticeable lag for the user)
     const debouncedEnforce = () => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
         timeoutRef.current = setTimeout(() => {
             enforceBlocking();
-        }, 500);
+        }, 100);
     };
 
     // Initial check (immediate)

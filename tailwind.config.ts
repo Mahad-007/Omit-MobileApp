@@ -14,6 +14,11 @@ export default {
       },
     },
     extend: {
+      screens: {
+        'xs':        '360px',
+        'tablet':    '600px',
+        'tablet-lg': '840px',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

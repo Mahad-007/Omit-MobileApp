@@ -237,7 +237,8 @@
   }
 
   h1 {
-    @apply text-4xl font-bold tracking-tight;
+    @apply font-bold tracking-tight;
+    font-size: clamp(1.75rem, 8vw, 2.25rem);
   }
   h2 {
     @apply text-2xl font-semibold;
@@ -254,9 +255,9 @@
    ============================================ */
 
 @layer utilities {
-  /* Safe area utilities */
+  /* Safe area utilities — works for Android gesture nav & iOS */
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 24px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .safe-area-top {
@@ -291,6 +292,23 @@
   .icon-responsive-lg {
     @apply w-6 h-6;
   }
+}
+
+/* ============================================
+   SMALL SCREEN OVERRIDES (budget Android phones ≤360px)
+   ============================================ */
+@media (max-width: 360px) {
+  /* Reduce horizontal padding on tight screens */
+  .px-6 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .px-8 { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
+
+  /* Tighten top spacing */
+  .pt-8 { padding-top: 1.25rem !important; }
+  .pt-14 { padding-top: 2.5rem !important; }
+
+  /* Reduce card rounded corners slightly */
+  .rounded-3xl { border-radius: 1.25rem !important; }
+  .rounded-\[32px\] { border-radius: 1.25rem !important; }
 }
 
 /* Responsive icon sizes */
@@ -334,13 +352,13 @@
   border: 1px solid hsl(var(--border) / 0.5);
   border-radius: var(--radius);
   box-shadow: var(--shadow-ambient);
-  /* backdrop-filter: blur(8px); */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .zen-card:hover {
   box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
 }
 
 /* Zen Card Shadow (legacy support) */
@@ -348,29 +366,33 @@
   box-shadow: var(--shadow-ambient);
 }
 
-/* Premium Glassmorphism - Simplified for stability */
+/* Premium Glassmorphism */
 .glass {
-  background: hsl(var(--card) / 0.95);
-  /* backdrop-filter: blur(16px) saturate(180%); */
+  background: hsl(var(--card) / 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .glass-blur {
-  /* backdrop-filter: blur(24px); */
-  background: hsl(var(--background) / 0.95);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  background: hsl(var(--background) / 0.88);
 }
 
 .glass-dark {
-  background: hsl(var(--card) / 0.95);
-  /* backdrop-filter: blur(20px) saturate(150%); */
+  background: hsl(var(--card) / 0.9);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
 }
 
 .glass-premium {
   background: linear-gradient(
     135deg,
-    hsl(var(--card) / 0.95) 0%,
-    hsl(var(--card) / 0.9) 100%
+    hsl(var(--card) / 0.9) 0%,
+    hsl(var(--card) / 0.85) 100%
   );
-  /* backdrop-filter: blur(24px) saturate(180%); */
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
   border: 1px solid hsl(var(--border) / 0.3);
 }
 
@@ -635,39 +657,90 @@
    ANIMATION UTILITIES
    ============================================ */
 
+/* Spring pop-in — for newly appearing items (tasks added, modals, cards) */
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.82) translateY(10px); }
+  55%  { opacity: 1; transform: scale(1.04) translateY(-2px); }
+  75%  { transform: scale(0.98); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+/* Checkmark spring — for task completion tick */
+@keyframes checkPop {
+  0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+  55%  { transform: scale(1.35) rotate(6deg); opacity: 1; }
+  80%  { transform: scale(0.9) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Slide + collapse out — for task row deletion */
+@keyframes collapseOut {
+  0%   { opacity: 1; transform: translateX(0); max-height: 120px; margin-bottom: 8px; padding-top: 16px; padding-bottom: 16px; }
+  50%  { opacity: 0; transform: translateX(-28px); }
+  100% { opacity: 0; transform: translateX(-28px); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+}
+
+/* Subtle gentle float — for ambient background decorations */
+@keyframes gentleFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33%       { transform: translateY(-6px) rotate(0.5deg); }
+  66%       { transform: translateY(-3px) rotate(-0.3deg); }
+}
+
+/* Slide down + fade in — for dropdowns, modals, panels */
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translateY(-14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* Slide up + fade in — for bottom sheets, toast-like reveals */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* Nav dot pulse — for active indicator dot appearing */
+@keyframes dotAppear {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
 /* ── Tab swipe page transitions ─────────────────────────────────────────── */
 @keyframes page-slide-from-right {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0);    }
+  from { opacity: 0.6; transform: translateX(60px); }
+  to   { opacity: 1;   transform: translateX(0);    }
 }
 
 @keyframes page-slide-from-left {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(0);     }
+  from { opacity: 0.6; transform: translateX(-60px); }
+  to   { opacity: 1;   transform: translateX(0);     }
 }
 
 .page-enter-from-right {
-  animation: page-slide-from-right 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: page-slide-from-right 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .page-enter-from-left {
-  animation: page-slide-from-left 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: page-slide-from-left 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .animate-fade-up {
-  animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  /* `both` applies the from-keyframe during delay, preventing a flash of visible
+     content on stagger-delayed items before their animation starts */
+  animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
+  animation: fadeIn 0.5s ease-out both;
 }
 
 .animate-slide-in {
-  animation: fadeSlideIn 0.5s ease-out forwards;
+  animation: fadeSlideIn 0.5s ease-out both;
 }
 
 .animate-scale-in {
-  animation: scaleIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: scaleIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .animate-breathe {
@@ -737,31 +810,58 @@
   animation: bounce-subtle 0.15s ease-out;
 }
 
+/* ── New animation utilities ─────────────────────────────────────────────── */
+
+/* Spring pop — for items that appear (new tasks, cards, icons) */
+.animate-pop-in {
+  animation: popIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Checkmark spring — apply to Check icon on task completion */
+.animate-check-pop {
+  animation: checkPop 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Collapse and vanish — apply to task rows on deletion */
+.animate-collapse-out {
+  animation: collapseOut 0.28s cubic-bezier(0.55, 0, 1, 0.45) both;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Gentle floating — ambient decorations */
+.animate-gentle-float {
+  animation: gentleFloat 9s ease-in-out infinite;
+}
+
+/* Dropdown / panel open from top */
+.animate-slide-down-fade {
+  animation: slideDownFade 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Bottom sheet / upward reveal */
+.animate-slide-up-fade {
+  animation: slideUpFade 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Active nav dot appear */
+.animate-dot-appear {
+  animation: dotAppear 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Staggered entrance delays */
-.stagger-1 {
-  animation-delay: 0.05s;
-}
-.stagger-2 {
-  animation-delay: 0.1s;
-}
-.stagger-3 {
-  animation-delay: 0.15s;
-}
-.stagger-4 {
-  animation-delay: 0.2s;
-}
-.stagger-5 {
-  animation-delay: 0.25s;
-}
-.stagger-6 {
-  animation-delay: 0.3s;
-}
-.stagger-7 {
-  animation-delay: 0.35s;
-}
-.stagger-8 {
-  animation-delay: 0.4s;
-}
+.stagger-1  { animation-delay: 0.05s; }
+.stagger-2  { animation-delay: 0.1s;  }
+.stagger-3  { animation-delay: 0.15s; }
+.stagger-4  { animation-delay: 0.2s;  }
+.stagger-5  { animation-delay: 0.25s; }
+.stagger-6  { animation-delay: 0.3s;  }
+.stagger-7  { animation-delay: 0.35s; }
+.stagger-8  { animation-delay: 0.4s;  }
+.stagger-9  { animation-delay: 0.45s; }
+.stagger-10 { animation-delay: 0.5s;  }
+.stagger-11 { animation-delay: 0.55s; }
+.stagger-12 { animation-delay: 0.6s;  }
 
 /* ============================================
    INTERACTION EFFECTS
@@ -769,21 +869,46 @@
 
 /* Press effect for buttons */
 .press-effect {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
 }
 
 .press-effect:active {
-  transform: scale(0.97);
+  transform: scale(0.95);
 }
 
-/* Hover lift */
+/* Hover lift — card elevation on hover */
 .hover-lift {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
 }
 
 .hover-lift:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-lg);
+}
+
+/* Hover scale — icon/chip enlargement */
+.hover-scale {
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hover-scale:hover  { transform: scale(1.06); }
+.hover-scale:active { transform: scale(0.94); }
+
+/* Task checkbox — smooth fill + spring press */
+.task-checkbox {
+  transition:
+    background-color 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color     0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    transform        0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow       0.22s ease;
+}
+
+.task-checkbox:active {
+  transform: scale(0.84);
+}
+
+.task-checkbox.checked {
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.35);
 }
 
 /* Timer ring animation */
@@ -839,18 +964,40 @@
    MOBILE APP CONTAINER
    ============================================ */
 
+/* Phone: cap at 430px and center (looks like a phone UI in browser).
+   Tablet (600px+): fill the full screen — no cap, no border. */
+:root {
+  --app-max-width: 430px;
+}
+@media (min-width: 600px) {
+  :root { --app-max-width: 100%; }
+}
+
 .app-container {
   @apply relative flex min-h-screen w-full flex-col overflow-x-hidden;
-  max-width: 430px;
+  max-width: var(--app-max-width);
   margin: 0 auto;
 }
 
-@media (min-width: 431px) {
+/* Phone-frame border only between 431-599px (browser dev preview) */
+@media (min-width: 431px) and (max-width: 599px) {
   .app-container {
     border-left: 1px solid hsl(var(--border) / 0.2);
     border-right: 1px solid hsl(var(--border) / 0.2);
     box-shadow: var(--shadow-xl);
   }
+}
+
+/* Fixed nav bar that tracks the app container width */
+.app-nav-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: var(--app-max-width);
+  margin-left: auto;
+  margin-right: auto;
+  z-index: 50;
 }
 
 /* ============================================
@@ -961,12 +1108,13 @@
   @apply bg-background/80 backdrop-blur-xl;
   @apply border-t border-border/30;
   @apply px-6 py-3;
-  max-width: 430px;
+  max-width: var(--app-max-width);
   margin: 0 auto;
 }
 
 .nav-item {
-  @apply flex flex-col items-center gap-1 transition-all duration-300;
+  @apply flex flex-col items-center gap-1;
+  transition: color 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   @apply text-muted-foreground;
 }
 
@@ -976,11 +1124,25 @@
 
 .nav-item.active .nav-icon-bg {
   @apply bg-primary/15;
-  box-shadow: 0 0 16px hsl(var(--primary) / 0.35);
+  box-shadow: 0 0 18px hsl(var(--primary) / 0.3);
 }
 
 .nav-icon-bg {
-  @apply p-2 rounded-xl transition-all duration-300;
+  @apply p-2 rounded-xl;
+  transition: background-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow       0.28s ease,
+              transform        0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Sliding active indicator pill in bottom nav */
+.nav-active-dot {
+  width: 20px;
+  height: 3px;
+  border-radius: 2px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.5);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity   0.25s ease;
 }
 
 /* ============================================

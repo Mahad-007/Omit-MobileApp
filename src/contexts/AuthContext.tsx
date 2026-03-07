@@ -32,17 +32,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
+
       if (session?.user) {
         localStorage.setItem('focussphere_user_id', session.user.id);
-        // We don't have focus mode state here, so we default to false or need to fetch it
-        // For now, just syncing user ID is the most important
         syncWithExtension(session.user.id, false, session.access_token);
         storage.setAuth(session.user.id);
       } else {
         localStorage.removeItem('focussphere_user_id');
         storage.setAuth(null);
       }
+    }).catch(() => {
+      // Ensure loading is always cleared even if Supabase is unreachable
+      setLoading(false);
     });
 
     // Listen for auth changes

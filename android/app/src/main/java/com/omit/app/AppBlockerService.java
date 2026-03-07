@@ -9,8 +9,10 @@ import android.view.accessibility.AccessibilityEvent;
 import android.os.Handler;
 import android.os.Looper;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class AppBlockerService extends AccessibilityService {
@@ -18,8 +20,10 @@ public class AppBlockerService extends AccessibilityService {
     private static AppBlockerService instance;
     private String lastBlockedPackage = "";
     private Set<String> launcherPackages;
-    private long lastOverlayDismissedTime = 0;
-    private static final long COOLDOWN_MS = 2000; // 2 second cooldown after overlay dismissed
+    // Per-package cooldown: prevents immediately re-blocking the exact same app
+    // after dismissal, without affecting other blocked apps.
+    private final Map<String, Long> lastDismissedTimeByPackage = new HashMap<>();
+    private static final long COOLDOWN_MS = 2000; // 2 second per-package cooldown
 
     // Debounce mechanism to wait for app to fully load
     private final Handler overlayHandler = new Handler(Looper.getMainLooper());
@@ -147,8 +151,10 @@ public class AppBlockerService extends AccessibilityService {
         }
 
         pendingOverlayRunnable = () -> {
-            // Double-check cooldown and that we're still trying to block this package
-            if (System.currentTimeMillis() - lastOverlayDismissedTime < COOLDOWN_MS) {
+            // Check per-package cooldown so that dismissing app A doesn't give app B
+            // a free window to bypass blocking.
+            Long lastDismissed = lastDismissedTimeByPackage.get(packageName);
+            if (lastDismissed != null && System.currentTimeMillis() - lastDismissed < COOLDOWN_MS) {
                 pendingBlockedPackage = "";
                 return;
             }
@@ -169,11 +175,13 @@ public class AppBlockerService extends AccessibilityService {
         startService(intent);
     }
 
-    // Called when overlay is dismissed to start cooldown
+    // Called when overlay is dismissed to start per-package cooldown
     public void onOverlayDismissed() {
-        lastOverlayDismissedTime = System.currentTimeMillis();
-        lastBlockedPackage = ""; // Reset so it can be blocked again after cooldown
-        cancelPendingOverlay(); // Cancel any pending overlay too
+        if (!lastBlockedPackage.isEmpty()) {
+            lastDismissedTimeByPackage.put(lastBlockedPackage, System.currentTimeMillis());
+        }
+        lastBlockedPackage = "";
+        cancelPendingOverlay();
     }
 
     @Override
@@ -201,11 +209,14 @@ public class AppBlockerService extends AccessibilityService {
         }
 
         AccessibilityServiceInfo info = new AccessibilityServiceInfo();
+        // Only subscribe to the two event types we actually handle.
+        // TYPE_WINDOW_CONTENT_CHANGED fires on every scroll/text-input and was
+        // generating thousands of unnecessary onAccessibilityEvent() calls.
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED |
-                AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED |
-                AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
+                AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED;
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
-        info.notificationTimeout = 100;
+        // 0 = no minimum gap between same-type events → react as fast as possible
+        info.notificationTimeout = 0;
         info.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS;
 
         setServiceInfo(info);
