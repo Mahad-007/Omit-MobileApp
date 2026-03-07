@@ -30,10 +30,10 @@ prompt_input() {
         read -r input
         
         if [ -n "$input" ]; then
-            eval "$var_name=\"$input\""
+            printf -v "$var_name" '%s' "$input"
             break
         elif [ "$required" != "true" ]; then
-            eval "$var_name=\"\""
+            printf -v "$var_name" '%s' ''
             break
         else
             echo -e "${RED}This field is required.${NC}"
@@ -110,7 +110,9 @@ while true; do
     if [ -z "$line" ]; then
         break
     fi
-    PRECONDITIONS="${PRECONDITIONS}- ${line}\n"
+    PRECONDITIONS="${PRECONDITIONS}- ${line}"
+    PRECONDITIONS="${PRECONDITIONS}
+"
 done
 
 # Step 4: Test Steps
@@ -135,7 +137,10 @@ while true; do
     
     prompt_input "Expected result:" EXPECTED true
     
-    TEST_STEPS="${TEST_STEPS}${STEP_NUM}. ${ACTION}\n   **Expected:** ${EXPECTED}\n\n"
+    TEST_STEPS="${TEST_STEPS}${STEP_NUM}. ${ACTION}
+   **Expected:** ${EXPECTED}
+
+"
     ((STEP_NUM++))
 done
 
@@ -165,9 +170,9 @@ prompt_input "Edge cases or variations to consider:" EDGE_CASES false
 prompt_input "Related test cases (IDs):" RELATED_TCS false
 prompt_input "Notes or comments:" NOTES false
 
-# Generate filename
-FILENAME="${TC_ID}.md"
-FILENAME="${FILENAME//[^a-zA-Z0-9_-]/}"
+# Generate filename - sanitize TC_ID first, then append extension
+SANITIZED_ID="${TC_ID//[^a-zA-Z0-9_-]/}"
+FILENAME="${SANITIZED_ID}.md"
 
 OUTPUT_DIR="."
 if [ ! -z "$1" ]; then
