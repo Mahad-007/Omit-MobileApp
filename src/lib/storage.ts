@@ -592,21 +592,9 @@ class LocalStorageService {
 
     this.saveAndroidSessionApps(uniqueSession);
     this.saveAndroidPersistentApps(uniquePersistent);
-
-    // Send updated arrays down to Cap plugin immediately
-    if (typeof window !== "undefined" && (window as any).Capacitor) {
-      try {
-        const allBlocked = Array.from(
-          new Set([...uniqueSession, ...uniquePersistent]),
-        );
-        const AppBlocker = (window as any).Capacitor.Plugins.AppBlocker;
-        if (AppBlocker && AppBlocker.setBlockedApps) {
-          AppBlocker.setBlockedApps({ apps: allBlocked });
-        }
-      } catch (e) {
-        console.error("Failed to sync blocks to Android plugin", e);
-      }
-    }
+    // PersistentBlockerManager handles the native sync via notifyChange("blockedApps")
+    // triggered by saveAndroid*() above. No direct call here to avoid a race where
+    // the direct call sends a session-unaware list that gets corrected 100ms later.
   }
 
   // --- FOCUS SESSIONS ---
@@ -645,14 +633,6 @@ class LocalStorageService {
     if (!stats) {
       stats = { date: today, savedHours: 0, wastedHours: 0 };
       allStats.push(stats);
-      this.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
-    } else if (
-      stats.savedHours === 0 &&
-      stats.wastedHours > 0 &&
-      stats.wastedHours < 0.5
-    ) {
-      // Fix old random wasted data
-      stats.wastedHours = 0;
       this.setItem(STORAGE_KEYS.DAILY_STATS, JSON.stringify(allStats));
     }
     return stats;

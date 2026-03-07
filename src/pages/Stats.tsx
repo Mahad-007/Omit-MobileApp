@@ -174,10 +174,10 @@ export default function Stats() {
     <div className="flex flex-col min-h-screen bg-background relative overflow-hidden pb-safe-area-bottom">
       {/* Background Gradient Mesh */}
       <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
-      <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-primary/10 blur-[100px] rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute top-0 left-0 w-[min(400px,100vw)] h-[min(400px,100vw)] bg-primary/10 blur-[100px] rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2" />
       
       {/* Header - Compact */}
-      <header className="flex items-center justify-between px-6 safe-area-top pt-6 pb-2 relative z-10 animate-fade-up">
+      <header className="flex items-center justify-between px-6 tablet:px-10 safe-area-top pt-6 tablet:pt-8 pb-2 relative z-10 animate-fade-up">
         <button 
           onClick={() => navigate('/')}
           className="size-10 flex items-center justify-center rounded-xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/10 transition-colors hover:bg-white/80 active:scale-95"
@@ -193,7 +193,7 @@ export default function Stats() {
         </button>
       </header>
       
-      <div className="flex-1 overflow-y-auto px-4 pb-24 no-scrollbar space-y-3">
+      <div className="flex-1 overflow-y-auto px-6 tablet:px-10 pb-24 no-scrollbar space-y-3 tablet:space-y-4">
         
         {/* Daily Limit Control - Compact */}
         <section className="animate-fade-up stagger-1">
@@ -236,13 +236,13 @@ export default function Stats() {
         </section>
 
         {/* Weekly Focus & Charts - Combined BENTO */}
-        <section className="grid grid-cols-2 gap-3 animate-fade-up stagger-2">
+        <section className="grid grid-cols-2 tablet:grid-cols-3 tablet-lg:grid-cols-4 gap-3 tablet:gap-4 animate-fade-up stagger-2">
             
             {/* Main Focus Stat */}
-            <div className="col-span-2 bg-white dark:bg-zinc-900 rounded-3xl p-5 border border-border shadow-sm flex flex-col justify-between min-h-[160px]">
+            <div className="col-span-2 tablet:col-span-3 tablet-lg:col-span-4 bg-white dark:bg-zinc-900 rounded-3xl p-5 tablet:p-6 border border-border shadow-sm flex flex-col justify-between min-h-[160px] tablet:min-h-[200px]">
                <div className="flex justify-between items-start">
                   <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-foreground">{weeklyFocusHours.toFixed(1)}<span className="text-sm text-muted-foreground font-medium ml-1">h</span></h2>
+                    <h2 className="text-3xl tablet:text-4xl font-bold tracking-tight text-foreground">{weeklyFocusHours.toFixed(1)}<span className="text-sm tablet:text-base text-muted-foreground font-medium ml-1">h</span></h2>
                     <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1">Focus Time</p>
                   </div>
                    <div className={cn(

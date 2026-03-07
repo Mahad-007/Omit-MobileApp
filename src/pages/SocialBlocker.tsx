@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import CustomTimeModal from "@/components/CustomTimeModal";
 import { UnifiedAppShield } from "@/components/UnifiedAppShield";
 
-import { 
+import {
   ChevronLeft,
   ShieldCheck,
   Timer,
@@ -22,7 +22,9 @@ import {
   Shield,
   Zap,
   Lock,
-  Globe
+  Globe,
+  Plus,
+  Trash2
 } from "lucide-react";
 
 // Haptic Feedback Utility
@@ -42,6 +44,9 @@ export default function SocialBlocker() {
   const [permissions, setPermissions] = useState<PermissionStatus | null>(null);
   const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
   const [isManageOpen, setIsManageOpen] = useState(false);
+  const [showAddWebShield, setShowAddWebShield] = useState(false);
+  const [newWebName, setNewWebName] = useState('');
+  const [newWebUrl, setNewWebUrl] = useState('');
   const [installedApps, setInstalledApps] = useState<any[]>([]);
   const [isInitiating, setIsInitiating] = useState(false);
 
@@ -91,6 +96,31 @@ export default function SocialBlocker() {
 
     return [...webApps, ...androidApps];
   }, [apps, installedApps]);
+
+  const normalizeUrl = (url: string) =>
+    url.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').trim();
+
+  const handleAddWebShield = () => {
+    const name = newWebName.trim();
+    const url = normalizeUrl(newWebUrl);
+    if (!name || !url) return;
+
+    if (apps.some(a => normalizeUrl(a.url) === url)) {
+      toast.error('This site is already shielded');
+      return;
+    }
+
+    storage.saveBlockedApp({ name, url, isEnabled: true, blocked: true, blockMode: 'focus' });
+    setNewWebName('');
+    setNewWebUrl('');
+    setShowAddWebShield(false);
+    toast.success(`Shield added for ${name}`);
+  };
+
+  const handleDeleteWebShield = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    storage.deleteBlockedApp(id);
+  };
 
   const toggleStrictMode = (checked: boolean) => {
     triggerHaptic("light");
@@ -145,13 +175,13 @@ export default function SocialBlocker() {
     )}>
       {/* Zen Atmosphere */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] animate-aurora" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] animate-aurora" style={{ animationDelay: '-5s' }} />
+        <div className="absolute top-[-10%] right-[-10%] w-[min(600px,150vw)] h-[min(600px,150vw)] bg-primary/10 rounded-full blur-[120px] animate-aurora" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[min(500px,130vw)] h-[min(500px,130vw)] bg-blue-500/10 rounded-full blur-[100px] animate-aurora" style={{ animationDelay: '-5s' }} />
       </div>
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/60 backdrop-blur-2xl border-b border-white/5">
-        <div className="flex items-center px-4 h-16 max-w-md mx-auto w-full justify-between">
+        <div className="flex items-center px-6 tablet:px-10 h-16 tablet:h-20 w-full justify-between">
           <button 
             onClick={() => {
                 triggerHaptic("light");
@@ -173,7 +203,7 @@ export default function SocialBlocker() {
         </div>
       </header>
 
-      <main className="flex-1 px-6 pt-8 max-w-md mx-auto w-full space-y-10 relative z-10 animate-fade-in">
+      <main className="flex-1 px-6 tablet:px-10 pt-8 tablet:pt-12 w-full space-y-10 relative z-10 animate-fade-in">
         
         {/* Shield Ritual Header */}
         <section className="flex flex-col items-center text-center space-y-6">
@@ -182,14 +212,14 @@ export default function SocialBlocker() {
               <div className="absolute inset-0 rounded-full bg-primary/20 animate-ripple" />
               <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple" style={{ animationDelay: '0.5s' }} />
               
-              <div className="size-24 rounded-[32px] bg-shield-active flex items-center justify-center shadow-2xl shadow-primary/40 relative z-10 animate-shield-pulse transition-transform duration-500 group-hover:scale-110 active:scale-90">
-                 <Shield className="size-10 text-white fill-white/20" />
+              <div className="size-24 tablet:size-32 rounded-[32px] bg-shield-active flex items-center justify-center shadow-2xl shadow-primary/40 relative z-10 animate-shield-pulse transition-transform duration-500 group-hover:scale-110 active:scale-90">
+                 <Shield className="size-10 tablet:size-14 text-white fill-white/20" />
               </div>
            </div>
            
            <div className="space-y-1">
-              <h2 className="text-2xl font-black tracking-tight">Focus Protocol</h2>
-              <p className="text-sm text-muted-foreground font-medium">Configure your mental sanctuary</p>
+              <h2 className="text-2xl tablet:text-3xl font-black tracking-tight">Focus Protocol</h2>
+              <p className="text-sm tablet:text-base text-muted-foreground font-medium">Configure your mental sanctuary</p>
            </div>
         </section>
 
@@ -251,12 +281,12 @@ export default function SocialBlocker() {
       </main>
 
       {/* Start Button Container */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 pb-24 z-40 bg-gradient-to-t from-background via-background/90 to-transparent pt-12">
-        <div className="max-w-md mx-auto">
-          <button 
+      <div className="fixed bottom-0 left-0 right-0 p-6 tablet:p-8 pb-24 tablet:pb-28 z-40 bg-gradient-to-t from-background via-background/90 to-transparent pt-12">
+        <div className="w-full">
+          <button
             onClick={startFocusSession}
             disabled={focusModeActive || isTimeLimitExceeded}
-            className="w-full h-16 rounded-[24px] font-black text-lg flex items-center justify-center gap-4 transition-all active:scale-95 disabled:opacity-40 text-white shadow-2xl shadow-primary/25 hover:shadow-primary/40 group relative overflow-hidden bg-shield-active"
+            className="w-full h-16 tablet:h-20 rounded-[24px] font-black text-lg tablet:text-xl flex items-center justify-center gap-4 transition-all active:scale-95 disabled:opacity-40 text-white shadow-2xl shadow-primary/25 hover:shadow-primary/40 group relative overflow-hidden bg-shield-active"
           >
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
             
@@ -296,36 +326,98 @@ export default function SocialBlocker() {
            <div className="space-y-8">
               {/* Web Shields Section */}
               <section className="space-y-4">
-                 <div className="flex items-center gap-2 px-1">
-                    <Globe className="w-4 h-4 text-primary" />
-                    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Web Shields</h3>
+                 <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2">
+                       <Globe className="w-4 h-4 text-primary" />
+                       <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Web Shields</h3>
+                    </div>
+                    <button
+                       onClick={() => setShowAddWebShield(v => !v)}
+                       className="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center active:scale-90 transition-all hover:bg-primary hover:text-white"
+                    >
+                       <Plus className="w-4 h-4" />
+                    </button>
                  </div>
-                 
+
+                 {/* Add Web Shield Form */}
+                 {showAddWebShield && (
+                    <div className="p-4 rounded-[24px] bg-primary/5 border border-primary/20 space-y-3">
+                       <input
+                          type="text"
+                          placeholder="Name (e.g. Instagram)"
+                          value={newWebName}
+                          onChange={(e) => setNewWebName(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-background/60 border border-white/10 text-sm font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+                       />
+                       <input
+                          type="text"
+                          placeholder="Domain (e.g. instagram.com)"
+                          value={newWebUrl}
+                          onChange={(e) => setNewWebUrl(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddWebShield()}
+                          className="w-full px-4 py-3 rounded-xl bg-background/60 border border-white/10 text-sm font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+                       />
+                       <div className="flex gap-2">
+                          <button
+                             onClick={() => { setShowAddWebShield(false); setNewWebName(''); setNewWebUrl(''); }}
+                             className="flex-1 h-10 rounded-xl bg-muted/50 text-xs font-bold text-muted-foreground hover:bg-muted transition-all active:scale-95"
+                          >
+                             Cancel
+                          </button>
+                          <button
+                             onClick={handleAddWebShield}
+                             disabled={!newWebName.trim() || !newWebUrl.trim()}
+                             className="flex-1 h-10 rounded-xl bg-primary text-white text-xs font-bold disabled:opacity-40 hover:bg-primary/90 transition-all active:scale-95"
+                          >
+                             Add Shield
+                          </button>
+                       </div>
+                    </div>
+                 )}
+
                  <div className="grid grid-cols-1 gap-3">
-                    {apps.map(app => (
-                        <div 
-                          key={app.id}
-                          onClick={() => storage.toggleAppBlock(app.id)}
-                          className={cn(
-                            "flex items-center justify-between p-4 rounded-[24px] border transition-all active:scale-[0.98]",
-                            app.isEnabled ? "bg-primary/5 border-primary/20" : "bg-card/40 border-white/5"
-                          )}
-                        >
-                           <div className="flex items-center gap-4">
-                              <div className={cn(
-                                "size-10 rounded-xl flex items-center justify-center transition-all",
-                                app.isEnabled ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-                              )}>
-                                 <Shield className="w-5 h-5" />
-                              </div>
-                              <div>
-                                 <span className="text-sm font-bold block">{app.name}</span>
-                                 <span className="text-[10px] font-medium opacity-50">{app.url}</span>
-                              </div>
-                           </div>
-                           <Switch checked={app.isEnabled} className="scale-90" />
-                        </div>
-                    ))}
+                    {apps.length === 0 && !showAddWebShield ? (
+                       <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <div className="size-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
+                             <Globe className="w-6 h-6 text-muted-foreground/40" />
+                          </div>
+                          <p className="text-sm text-muted-foreground font-medium">No web shields yet</p>
+                          <p className="text-xs text-muted-foreground/50 mt-1">Tap + to block distracting websites</p>
+                       </div>
+                    ) : (
+                       apps.map(app => (
+                          <div
+                             key={app.id}
+                             onClick={() => storage.toggleAppBlock(app.id)}
+                             className={cn(
+                               "flex items-center justify-between p-4 rounded-[24px] border transition-all active:scale-[0.98]",
+                               app.isEnabled ? "bg-primary/5 border-primary/20" : "bg-card/40 border-white/5"
+                             )}
+                          >
+                             <div className="flex items-center gap-4">
+                                <div className={cn(
+                                  "size-10 rounded-xl flex items-center justify-center transition-all",
+                                  app.isEnabled ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                                )}>
+                                   <Shield className="w-5 h-5" />
+                                </div>
+                                <div>
+                                   <span className="text-sm font-bold block">{app.name}</span>
+                                   <span className="text-[10px] font-medium opacity-50">{app.url}</span>
+                                </div>
+                             </div>
+                             <div className="flex items-center gap-2">
+                                <Switch checked={!!app.isEnabled} className="scale-90" onClick={(e) => e.stopPropagation()} />
+                                <button
+                                   onClick={(e) => handleDeleteWebShield(app.id, e)}
+                                   className="size-8 rounded-xl hover:bg-destructive/10 flex items-center justify-center text-muted-foreground/40 hover:text-destructive transition-all active:scale-90"
+                                >
+                                   <Trash2 className="w-4 h-4" />
+                                </button>
+                             </div>
+                          </div>
+                       ))
+                    )}
                  </div>
               </section>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Task } from "@/lib/storage";
 import { useLocalTasks } from "@/hooks/useLocalData";
@@ -20,6 +20,9 @@ export default function Tasks() {
   const { data: tasks = [], isLoading, createTask, updateTask, deleteTask } = useLocalTasks();
   const [activeTab, setActiveTab] = useState<'today' | 'upcoming'>('today');
   const [showAddModal, setShowAddModal] = useState(false);
+  // Track tasks being deleted so we can animate them out before removing
+  const deletingRef = useRef<Set<string>>(new Set());
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   // Task Handlers using React Query Mutations
   const handleToggleComplete = async (id: string) => {
@@ -32,12 +35,20 @@ export default function Tasks() {
     }
   };
 
-  const handleDeleteTask = async (id: string) => {
-    try {
-      await deleteTask.mutateAsync(id);
-    } catch (error) {
-      toast.error("Failed to delete task");
-    }
+  const handleDeleteTask = (id: string) => {
+    // Animate out first, then actually delete after animation completes
+    deletingRef.current.add(id);
+    setDeletingIds(new Set(deletingRef.current));
+    setTimeout(async () => {
+      try {
+        await deleteTask.mutateAsync(id);
+      } catch {
+        toast.error("Failed to delete task");
+      } finally {
+        deletingRef.current.delete(id);
+        setDeletingIds(new Set(deletingRef.current));
+      }
+    }, 260);
   };
 
   const handleAddTask = async (newTask: Omit<Task, 'id' | 'completed' | 'createdAt'>) => {
@@ -96,35 +107,46 @@ export default function Tasks() {
   const remainingSessions = tasks.filter(t => !t.completed).length;
   const completedToday = todayTasks.filter(t => t.completed).length;
 
-  const renderTaskItem = (task: Task, index: number) => (
-    <div 
+  const renderTaskItem = (task: Task, index: number) => {
+    const isDeleting = deletingIds.has(task.id);
+    return (
+    <div
       key={task.id}
-      className="flex items-center group gap-4 py-4 px-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm transition-all hover:bg-card/80 animate-fade-up"
-      style={{ animationDelay: `${index * 0.05}s` }}
+      className={`flex items-center group gap-4 py-4 tablet:py-5 px-4 tablet:px-5 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm hover:bg-card/80 hover:border-border/60 hover:shadow-md animate-fade-up ${isDeleting ? 'animate-collapse-out' : ''}`}
+      style={{
+        animationDelay: isDeleting ? '0s' : `${index * 0.05}s`,
+        transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease',
+      }}
     >
       <button
         onClick={() => handleToggleComplete(task.id)}
-        className={`flex-shrink-0 size-6 rounded-lg border-2 transition-all flex items-center justify-center ${
-          task.completed 
-            ? 'bg-primary border-primary' 
-            : task.priority === 'high' 
-              ? 'border-highlight/60 hover:border-highlight' 
+        className={`task-checkbox flex-shrink-0 size-6 rounded-lg border-2 flex items-center justify-center ${
+          task.completed
+            ? 'bg-primary border-primary checked'
+            : task.priority === 'high'
+              ? 'border-highlight/60 hover:border-highlight'
               : 'border-border hover:border-primary/50'
         }`}
       >
         {task.completed && (
-          <Check className="w-4 h-4 text-white" strokeWidth={3} />
+          <Check className="w-4 h-4 text-white animate-check-pop" strokeWidth={3} />
         )}
       </button>
-      
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           {task.priority === 'high' && !task.completed && (
             <div className="priority-dot high" />
           )}
-          <p className={`text-base font-medium truncate ${
-            task.completed ? 'line-through text-muted-foreground' : 'text-foreground'
-          }`}>
+          <p
+            className="text-base font-medium truncate"
+            style={{
+              transition: 'opacity 0.3s ease, color 0.3s ease, text-decoration-color 0.3s ease',
+              opacity: task.completed ? 0.45 : 1,
+              textDecoration: task.completed ? 'line-through' : 'none',
+              color: task.completed ? 'hsl(var(--muted-foreground))' : 'hsl(var(--foreground))',
+            }}
+          >
             {task.title}
           </p>
         </div>
@@ -143,15 +165,17 @@ export default function Tasks() {
           )}
         </div>
       </div>
-      
+
       <button
         onClick={() => handleDeleteTask(task.id)}
-        className="flex-shrink-0 opacity-0 group-hover:opacity-100 p-2 hover:bg-destructive/10 rounded-xl transition-all"
+        className="flex-shrink-0 opacity-0 group-hover:opacity-100 p-2 hover:bg-destructive/10 rounded-xl hover-scale"
+        style={{ transition: 'opacity 0.2s ease, background-color 0.15s ease' }}
       >
         <Trash2 className="w-5 h-5 text-muted-foreground hover:text-destructive" />
       </button>
     </div>
   );
+  };
 
   const renderSection = (title: string, taskList: Task[], emptyMessage: string) => (
     <section className="space-y-3 mb-8">
@@ -187,23 +211,23 @@ export default function Tasks() {
       ) : (
         <>
         {/* Atmospheric backgrounds */}
-        <div className="absolute -top-32 -right-32 size-80 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-32 -left-32 size-64 bg-highlight/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-32 -right-32 w-[min(320px,80vw)] h-[min(320px,80vw)] bg-primary/8 rounded-full blur-3xl pointer-events-none animate-gentle-float" style={{ animationDuration: '12s' }} />
+        <div className="absolute bottom-32 -left-32 w-[min(256px,65vw)] h-[min(256px,65vw)] bg-highlight/5 rounded-full blur-3xl pointer-events-none animate-gentle-float" style={{ animationDuration: '16s', animationDelay: '4s' }} />
   
         {/* Header */}
-        <header className="flex flex-col px-6 pt-14 pb-4 gap-4 sticky top-0 z-20 bg-background border-b border-border/30">
+        <header className="flex flex-col px-6 tablet:px-10 pt-14 tablet:pt-16 pb-4 gap-4 sticky top-0 z-20 bg-background border-b border-border/30">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">Inbox</h1>
-              <p className="text-muted-foreground text-sm mt-1">
+              <h1 className="text-3xl tablet:text-4xl font-bold tracking-tight text-foreground">Inbox</h1>
+              <p className="text-muted-foreground text-sm tablet:text-base mt-1">
                 {remainingSessions} tasks remaining
                 {completedToday > 0 && <span className="text-primary"> · {completedToday} done today</span>}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setShowAddModal(true)}
-                className="size-11 rounded-2xl border border-primary/20 bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-all hover-lift active:scale-95"
+                className="size-11 tablet:size-13 rounded-2xl border border-primary/20 bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-all hover-lift active:scale-95"
                 aria-label="Add Task"
               >
                 <Plus className="w-6 h-6 text-primary" />
@@ -219,24 +243,35 @@ export default function Tasks() {
           </div>
   
           {/* Tab Switcher */}
-          <nav className="flex gap-1 p-1 rounded-2xl bg-muted/50">
-            <button 
+          <nav className="relative flex gap-1 p-1 rounded-2xl bg-muted/50">
+            {/* Sliding pill indicator */}
+            <div
+              className="absolute top-1 bottom-1 rounded-xl bg-card shadow-sm pointer-events-none"
+              style={{
+                width: 'calc(50% - 6px)',
+                transform: activeTab === 'today' ? 'translateX(0)' : 'translateX(calc(100% + 4px))',
+                transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }}
+            />
+            <button
               onClick={() => setActiveTab('today')}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === 'today' 
-                  ? 'bg-card text-foreground shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground'
+              className={`relative flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold z-10 ${
+                activeTab === 'today'
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground/70'
               }`}
+              style={{ transition: 'color 0.25s ease' }}
             >
               Today
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('upcoming')}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === 'upcoming' 
-                  ? 'bg-card text-foreground shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground'
+              className={`relative flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold z-10 ${
+                activeTab === 'upcoming'
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground/70'
               }`}
+              style={{ transition: 'color 0.25s ease' }}
             >
               Upcoming
             </button>
@@ -244,7 +279,7 @@ export default function Tasks() {
         </header>
   
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto no-scrollbar px-6 pb-32 pt-6">
+        <main className="flex-1 overflow-y-auto no-scrollbar px-6 tablet:px-10 pb-32 pt-6 tablet:pt-8">
           {activeTab === 'today' ? (
             <>
               {overdueTasks.length > 0 && renderSection('Overdue', overdueTasks, '')}

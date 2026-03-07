@@ -135,43 +135,53 @@ export default function Layout() {
 
       {/* Premium Bottom Navigation - Focus First Design */}
       {!hideNav && (
-        <nav className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto z-50">
+        <nav className="app-nav-container">
           {/* Gradient fade background */}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none" style={{ height: '120%', top: '-20%' }} />
 
           {/* Navigation bar */}
-          <div className="relative bg-card border-t border-border/30 px-6 py-3 flex justify-between items-center">
+          <div className="relative glass-blur bg-card/80 border-t border-border/20 px-6 tablet:px-10 py-3 tablet:py-4 flex justify-between items-center">
             {/* Left nav items */}
             {navItems.slice(0, 2).map((item) => (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-1.5 min-w-[56px] transition-all duration-300 ${
-                  isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                className={`flex flex-col items-center gap-1 min-w-[56px] tablet:min-w-[80px] transition-colors duration-250 ${
+                  isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground/70'
                 }`}
               >
-                <div className={`p-2 rounded-xl transition-all duration-300 ${
-                  isActive(item.path)
-                    ? 'bg-primary/15'
-                    : ''
+                <div className={`p-2 tablet:p-2.5 rounded-xl ${
+                  isActive(item.path) ? 'bg-primary/12' : ''
                 }`}
+                  style={{
+                    transition: 'background-color 0.28s cubic-bezier(0.22,1,0.36,1), box-shadow 0.28s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+                    boxShadow: isActive(item.path) ? '0 0 18px hsl(var(--primary) / 0.28)' : 'none',
+                    transform: isActive(item.path) ? 'scale(1.1)' : 'scale(1)',
+                  }}
                 >
                   <item.icon
-                    className={`w-5 h-5 transition-transform duration-200 ${
-                      isActive(item.path) ? 'scale-110' : ''
-                    }`}
-                    strokeWidth={isActive(item.path) ? 2.5 : 2}
+                    className="w-5 h-5 tablet:w-6 tablet:h-6"
+                    strokeWidth={isActive(item.path) ? 2.5 : 1.8}
+                    style={{ transition: 'stroke-width 0.2s ease' }}
                   />
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
+                <span className="text-[10px] tablet:text-xs font-bold uppercase tracking-tight leading-none">{item.label}</span>
+                {/* Active indicator dot */}
+                <div
+                  className="nav-active-dot"
+                  style={{
+                    opacity: isActive(item.path) ? 1 : 0,
+                    transform: isActive(item.path) ? 'scaleX(1)' : 'scaleX(0)',
+                  }}
+                />
               </button>
             ))}
 
             {/* Center Floating Focus Button - THE PRIMARY ACTION */}
-            <div className="relative -top-7">
+            <div className="relative -top-7 tablet:-top-9">
               <button
                 onClick={handleStartFocus}
-                className="relative flex size-14 items-center justify-center rounded-2xl text-white transition-all hover:scale-105 press-effect"
+                className="relative flex size-14 tablet:size-16 items-center justify-center rounded-2xl text-white transition-all hover:scale-105 press-effect"
                 style={{
                   background: focusModeActive
                     ? 'var(--gradient-accent)'
@@ -181,7 +191,7 @@ export default function Layout() {
                     : '0 8px 32px hsla(258, 85%, 65%, 0.4), 0 4px 12px hsla(258, 85%, 65%, 0.3)'
                 }}
               >
-                {focusModeActive ? <Timer className="w-7 h-7" strokeWidth={2.5} /> : <Shield className="w-7 h-7" strokeWidth={2.5} />}
+                {focusModeActive ? <Timer className="w-7 h-7 tablet:w-8 tablet:h-8" strokeWidth={2.5} /> : <Shield className="w-7 h-7 tablet:w-8 tablet:h-8" strokeWidth={2.5} />}
                 {focusModeActive && (
                   <div
                     className="absolute -top-1 -right-1 size-4 rounded-full border-2 border-background animate-subtle-pulse"
@@ -196,24 +206,34 @@ export default function Layout() {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-1.5 min-w-[56px] transition-all duration-300 ${
-                  isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                className={`flex flex-col items-center gap-1 min-w-[56px] tablet:min-w-[80px] transition-colors duration-250 ${
+                  isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground/70'
                 }`}
               >
-                <div className={`p-2 rounded-xl transition-all duration-300 ${
-                  isActive(item.path)
-                    ? 'bg-primary/15'
-                    : ''
+                <div className={`p-2 tablet:p-2.5 rounded-xl ${
+                  isActive(item.path) ? 'bg-primary/12' : ''
                 }`}
+                  style={{
+                    transition: 'background-color 0.28s cubic-bezier(0.22,1,0.36,1), box-shadow 0.28s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+                    boxShadow: isActive(item.path) ? '0 0 18px hsl(var(--primary) / 0.28)' : 'none',
+                    transform: isActive(item.path) ? 'scale(1.1)' : 'scale(1)',
+                  }}
                 >
                   <item.icon
-                    className={`w-5 h-5 transition-transform duration-200 ${
-                      isActive(item.path) ? 'scale-110' : ''
-                    }`}
-                    strokeWidth={isActive(item.path) ? 2.5 : 2}
+                    className="w-5 h-5 tablet:w-6 tablet:h-6"
+                    strokeWidth={isActive(item.path) ? 2.5 : 1.8}
+                    style={{ transition: 'stroke-width 0.2s ease' }}
                   />
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
+                <span className="text-[10px] tablet:text-xs font-bold uppercase tracking-tight leading-none">{item.label}</span>
+                {/* Active indicator dot */}
+                <div
+                  className="nav-active-dot"
+                  style={{
+                    opacity: isActive(item.path) ? 1 : 0,
+                    transform: isActive(item.path) ? 'scaleX(1)' : 'scaleX(0)',
+                  }}
+                />
               </button>
             ))}
           </div>
@@ -221,7 +241,7 @@ export default function Layout() {
       )}
 
       {/* Bottom Safe Area Spacer */}
-      {!hideNav && <div className="h-24" />}
+      {!hideNav && <div className="h-24 tablet:h-28" />}
     </div>
   );
 }

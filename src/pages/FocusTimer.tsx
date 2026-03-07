@@ -97,8 +97,8 @@ export default function FocusTimer() {
       const remainingSeconds = Math.floor(remaining / 1000);
       setTimeRemaining(remainingSeconds);
 
-      // Update notification every minute or at start
-      if (remainingSeconds % 60 === 0 || remainingSeconds === Math.floor((currentSession.endTime - Date.now()) / 1000)) {
+      // Update notification every minute
+      if (remainingSeconds % 60 === 0) {
         NotificationManager.updateRemainingTime(remainingSeconds);
       }
     }, 1000);
@@ -157,13 +157,13 @@ export default function FocusTimer() {
       {/* Deep Atmospheric Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-black/40" />
       <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-subtle-pulse" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[min(600px,150vw)] h-[min(600px,150vw)] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-subtle-pulse" />
       
       {/* Noise overlay for texture */}
       <div className="absolute inset-0 noise-overlay pointer-events-none" />
 
       {/* Session Header */}
-      <header className="w-full pt-16 px-8 flex flex-col items-center gap-3 animate-fade-up relative z-10">
+      <header className="w-full pt-10 sm:pt-16 px-8 flex flex-col items-center gap-3 animate-fade-up relative z-10">
         <div className="flex items-center gap-2">
           <div className="size-2 rounded-full bg-primary animate-subtle-pulse" />
           <span className="text-[10px] uppercase tracking-[0.4em] text-primary/80 font-bold">
@@ -178,7 +178,7 @@ export default function FocusTimer() {
       {/* Central Timer Display */}
       <main className="relative flex flex-col items-center justify-center flex-grow w-full z-10 -mt-8">
         {/* Timer Container */}
-        <div className="relative w-80 h-80 flex items-center justify-center">
+        <div className="relative flex items-center justify-center" style={{ width: 'min(420px, 75vw)', height: 'min(420px, 75vw)' }}>
           {/* Outer glow ring */}
           <div className="absolute inset-0 rounded-full bg-primary/5 animate-subtle-pulse" />
           
@@ -223,7 +223,7 @@ export default function FocusTimer() {
           
           {/* Time Display */}
           <div className="flex flex-col items-center text-center animate-breathe">
-            <span className="focus-timer-display text-7xl tracking-tighter text-foreground tabular-nums">
+            <span className="focus-timer-display tracking-tighter text-foreground tabular-nums" style={{ fontSize: 'clamp(3rem, 15vw, 5.5rem)' }}>
               {formatTime(timeRemaining)}
             </span>
             <span className="text-muted-foreground/60 text-xs font-medium uppercase tracking-widest mt-2">
@@ -303,7 +303,7 @@ export default function FocusTimer() {
       </main>
 
       {/* Bottom Controls */}
-      <footer className="w-full max-w-[400px] px-6 pb-10 flex flex-col gap-5 relative z-10">
+      <footer className="w-full px-6 tablet:px-10 pb-10 tablet:pb-14 flex flex-col gap-5 relative z-10" style={{ maxWidth: 'min(520px, 100%)' }}>
         {/* Progress Bar */}
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
@@ -323,11 +323,10 @@ export default function FocusTimer() {
 
         {/* Action Buttons */}
         <div className="flex gap-3 items-center">
-          <button 
+          <button
             onClick={() => {
               if (strictMode) return;
               if (!isPaused) {
-                // Bug 16 fix: Actually pause the session timer
                 storage.pauseFocusSession();
                 setIsPaused(true);
               } else {
@@ -336,7 +335,7 @@ export default function FocusTimer() {
               }
             }}
             disabled={strictMode}
-            className={`flex-1 h-14 flex items-center justify-center gap-2 rounded-2xl font-semibold text-sm transition-all ${
+            className={`flex-1 h-14 tablet:h-16 flex items-center justify-center gap-2 rounded-2xl font-semibold text-sm tablet:text-base transition-all ${
               strictMode
                 ? 'bg-muted/50 text-muted-foreground cursor-not-allowed border border-border/30'
                 : 'bg-card border border-border/40 text-foreground active:scale-[0.98] hover:bg-card'
@@ -347,10 +346,10 @@ export default function FocusTimer() {
             </span>
             <span>{strictMode ? 'Locked' : isPaused ? 'Resume' : 'Pause'}</span>
           </button>
-          <button 
+          <button
             onClick={handleEndSession}
             disabled={strictMode}
-            className={`flex-1 h-14 flex items-center justify-center gap-2 rounded-2xl font-semibold text-sm transition-all ${
+            className={`flex-1 h-14 tablet:h-16 flex items-center justify-center gap-2 rounded-2xl font-semibold text-sm tablet:text-base transition-all ${
               strictMode 
                 ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' 
                 : 'text-white active:scale-[0.98]'
