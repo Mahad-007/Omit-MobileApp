@@ -123,6 +123,7 @@ export default function Layout() {
     };
   }, [swipeHandlers.onTouchStart, swipeHandlers.onTouchMove, swipeHandlers.onTouchEnd]);
 
+
   // Determine animation class for the incoming page
   const enterClass =
     navDirectionRef.current === 'left'
