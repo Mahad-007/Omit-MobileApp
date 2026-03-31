@@ -26,8 +26,14 @@ export function useSwipeNavigation({
   const startY = useRef<number | null>(null);
   const isHorizontal = useRef<boolean | null>(null);
   const deltaRef = useRef(0);
+  // Keep a stable ref to the latest location so native listeners don't go stale
+  const locationRef = useRef(location.pathname);
+  locationRef.current = location.pathname;
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
+  // Native TouchEvent handlers (not React.TouchEvent) so they can be attached
+  // with { passive: false }, allowing preventDefault() to block the browser's
+  // scroll during a horizontal swipe — the primary cause of Android jank.
+  const onTouchStart = useCallback((e: TouchEvent) => {
     startX.current = e.targetTouches[0].clientX;
     startY.current = e.targetTouches[0].clientY;
     isHorizontal.current = null;
@@ -35,7 +41,7 @@ export function useSwipeNavigation({
   }, []);
 
   const onTouchMove = useCallback(
-    (e: React.TouchEvent) => {
+    (e: TouchEvent) => {
       if (startX.current === null || startY.current === null) return;
 
       const dx = e.targetTouches[0].clientX - startX.current;
@@ -49,7 +55,11 @@ export function useSwipeNavigation({
 
       if (!isHorizontal.current) return;
 
-      const currentIndex = routes.indexOf(location.pathname);
+      // Prevent the browser from also trying to scroll while we handle the
+      // horizontal swipe. Requires { passive: false } on the listener.
+      e.preventDefault();
+
+      const currentIndex = routes.indexOf(locationRef.current);
 
       // Rubber-band effect at the first/last tab
       let offset = dx;
@@ -63,7 +73,7 @@ export function useSwipeNavigation({
       deltaRef.current = offset;
       onDrag?.(offset);
     },
-    [location.pathname, routes, onDrag]
+    [routes, onDrag]
   );
 
   const onTouchEnd = useCallback(() => {
@@ -74,7 +84,7 @@ export function useSwipeNavigation({
     }
 
     const delta = deltaRef.current;
-    const currentIndex = routes.indexOf(location.pathname);
+    const currentIndex = routes.indexOf(locationRef.current);
 
     if (delta < -threshold && currentIndex < routes.length - 1) {
       onNavigate?.(routes[currentIndex + 1], "left");
@@ -85,7 +95,7 @@ export function useSwipeNavigation({
     }
 
     reset();
-  }, [location.pathname, routes, threshold, onNavigate, onCancel]);
+  }, [routes, threshold, onNavigate, onCancel]);
 
   function reset() {
     startX.current = null;

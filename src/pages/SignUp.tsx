@@ -56,9 +56,13 @@ export default function SignUp() {
   const onSubmit = async (data: SignUpFormValues) => {
     setIsLoading(true);
     try {
-      const { error } = await signUp(data.email, data.password);
+      const email = data.email.trim();
+      const { data: authData, error } = await signUp(email, data.password);
       if (error) {
         toast.error(error.message || 'Failed to create account');
+      } else if (authData?.user && (authData.user.identities?.length ?? 0) === 0) {
+        // Supabase returns an empty identities array when the email is already registered
+        toast.error('An account with this email already exists. Please sign in instead.');
       } else {
         toast.success('Account created! Please check your email to verify your account.');
         navigate('/login');

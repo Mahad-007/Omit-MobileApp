@@ -106,6 +106,23 @@ export default function Layout() {
     onCancel: handleCancel,
   });
 
+  // Attach native (non-passive) touch listeners so we can call preventDefault()
+  // during horizontal swipes, preventing Android from simultaneously scrolling
+  // while we animate the page drag. React's synthetic events are passive by
+  // default and cannot call preventDefault(), causing scroll/swipe fighting.
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    el.addEventListener('touchstart', swipeHandlers.onTouchStart, { passive: true });
+    el.addEventListener('touchmove',  swipeHandlers.onTouchMove,  { passive: false });
+    el.addEventListener('touchend',   swipeHandlers.onTouchEnd,   { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', swipeHandlers.onTouchStart);
+      el.removeEventListener('touchmove',  swipeHandlers.onTouchMove);
+      el.removeEventListener('touchend',   swipeHandlers.onTouchEnd);
+    };
+  }, [swipeHandlers.onTouchStart, swipeHandlers.onTouchMove, swipeHandlers.onTouchEnd]);
+
   // Determine animation class for the incoming page
   const enterClass =
     navDirectionRef.current === 'left'
@@ -120,9 +137,15 @@ export default function Layout() {
       <main
         ref={mainRef}
         className="flex-1 overflow-x-hidden"
-        onTouchStart={swipeHandlers.onTouchStart}
-        onTouchMove={swipeHandlers.onTouchMove}
-        onTouchEnd={swipeHandlers.onTouchEnd}
+        style={{
+          // Tell the browser we handle horizontal gestures so it doesn't wait
+          // ~300ms before routing touches to JS (eliminates Android swipe delay)
+          touchAction: 'pan-y',
+          // Promote to its own GPU compositor layer so transforms are handled
+          // by the GPU rather than re-painting on the CPU each frame
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+        }}
       >
         {/*
           key={location.key} — remounts this div on every navigation so the

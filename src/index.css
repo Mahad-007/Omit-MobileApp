@@ -719,10 +719,14 @@
 
 .page-enter-from-right {
   animation: page-slide-from-right 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 .page-enter-from-left {
   animation: page-slide-from-left 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 .animate-fade-up {
